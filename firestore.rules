@@ -1,0 +1,84 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function esAdmin() {
+      return request.auth != null
+        && request.auth.token.admin == true
+        || (request.auth != null && request.auth.token.email == 'admin@abuelarosa.cl');
+    }
+
+    // Catálogo: lectura pública, escritura solo admin.
+    match /ingredients/{id} {
+      allow read: if true;
+      allow write: if esAdmin();
+    }
+
+    match /drinks/{id} {
+      allow read: if true;
+      allow write: if esAdmin();
+    }
+
+    match /offers/{id} {
+      allow read: if true;
+      allow write: if esAdmin();
+    }
+
+    match /rules/{id} {
+      allow read: if true;
+      allow write: if esAdmin();
+    }
+
+    match /badges/{id} {
+      allow read: if true;
+      allow write: if esAdmin();
+    }
+
+    // Configuración: lectura pública, escritura solo admin.
+    match /settings/{id} {
+      allow read: if true;
+      allow write: if esAdmin();
+    }
+
+    // Contadores (número de pedido, etc.): solo admin.
+    match /counters/{id} {
+      allow read: if true;
+      allow write: if esAdmin();
+    }
+
+    // Historial de inventario (compras y conteos físicos): solo admin.
+    match /inventory_log/{id} {
+      allow read, write: if esAdmin();
+    }
+
+    // Ranking en vivo de combinaciones: incremento público controlado.
+    match /stats/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.count is int
+        && request.resource.data.count <= 25
+        && request.resource.data.nombre is string;
+      allow update: if request.resource.data.count - resource.data.count <= 25
+        && request.resource.data.count >= resource.data.count;
+    }
+
+    // Pedidos: cualquiera puede crear uno nuevo válido; solo admin lee/edita.
+    // Los clientes ven su pedido por id (opcional, para mostrar el ticket).
+    match /orders/{id} {
+      allow read: if esAdmin()
+        || (request.auth != null && resource.data.cliente.telefono == request.auth.token.phone_number);
+      allow create: if request.resource.data.cliente.nombre is string
+        && request.resource.data.cliente.telefono is string
+        && request.resource.data.items is list
+        && request.resource.data.totales.total is number
+        && request.resource.data.status == 'pendiente_pago'
+        && request.resource.data.totales.total > 0;
+      allow update, delete: if esAdmin();
+    }
+
+    // Clientes: perfil de gamificación. Solo admin lee; escritura limitada.
+    match /customers/{id} {
+      allow read, write: if esAdmin();
+    }
+  }
+}
