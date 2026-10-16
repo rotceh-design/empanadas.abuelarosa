@@ -1,4 +1,5 @@
 import logoAbuela from '../../assets/abuela-rosa.png';
+import { IconoCandado } from '../Iconos';
 
 /* Esquina ornamental vintage (curva con voluta) — se rota para las 4 esquinas */
 export function Esquina({ className = '', size = 56 }) {
@@ -81,7 +82,34 @@ export function SelloCircular({ size = 240, className = '' }) {
 }
 
 /* Sello grande de línea (Saladas / Dulces) */
-export function SelloLinea({ titulo, subtitulo, icono, onClick }) {
+export function SelloLinea({ titulo, subtitulo, icono, onClick, bloqueada = false, aviso = 'Próximamente' }) {
+  if (bloqueada) {
+    return (
+      <div
+        aria-disabled="true"
+        className="vt-sello vt-serif group relative flex w-full max-w-[15.5rem] cursor-not-allowed flex-col items-center gap-1 rounded-full px-6 py-8 opacity-70 grayscale sm:max-w-none"
+      >
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-2 rounded-full border border-dashed border-[#4a2c17]/40"
+        />
+        <span className="relative flex h-14 w-14 items-center justify-center">
+          {icono}
+        </span>
+        <span className="vt-serif relative mt-1 rounded-full border-2 border-[#8b4513]/40 bg-[#8b4513]/10 px-3 py-0.5 text-[0.65rem] font-bold uppercase tracking-widest text-[#8b4513]">
+          {aviso}
+        </span>
+        <span className="vt-titulo relative mt-2 text-center text-[1.35rem] leading-none sm:text-2xl">
+          {titulo}
+        </span>
+        <span className="vt-cuerpo relative mt-1 text-sm italic opacity-75">{subtitulo}</span>
+        <span className="vt-serif relative mt-3 inline-flex items-center gap-1.5 rounded-full border-2 border-[#4a2c17]/25 px-5 py-1.5 text-[0.7rem] font-bold uppercase tracking-wide opacity-70">
+          <IconoCandado size={14} /> Bloqueada
+        </span>
+      </div>
+    );
+  }
+
   return (
     <button type="button" onClick={onClick} className="vt-sello btn-tap vt-serif group relative flex w-full max-w-[15.5rem] flex-col items-center gap-1 rounded-full px-6 py-8 sm:max-w-none">
       {/* Anillo interior decorativo */}

@@ -6,7 +6,7 @@ import { usePlayer } from '../contexts/PlayerContext';
 import { useCart } from '../contexts/CartContext';
 import EmpanadaVisual from '../components/EmpanadaVisual';
 import Recomendador from '../components/builder/Recomendador';
-import { IconosEmpanada, IconoDulce, IconoEmpanada } from '../components/Iconos';
+import { IconosEmpanada, IconoDulce, IconoEmpanada, IconoCandado } from '../components/Iconos';
 import { SeparadorOrnamental, Floritura } from '../components/vintage/Ornamentos';
 import { fmtCLP, fmtNum } from '../lib/formato';
 import { combinacionesDelDia, itemCombinacionDelDia } from '../lib/daily';
@@ -16,7 +16,7 @@ import logoAbuela from '../assets/abuela-rosa.png';
 
 export default function Home() {
   const navigate = useNavigate();
-  const { lineas, settings, stats, precioBase, insignias, porId } = useCatalog();
+  const { lineas, lineasTodas, settings, stats, precioBase, insignias, porId } = useCatalog();
   const { perfil, desbloqueadas } = usePlayer();
   const { agregarEmpanada } = useCart();
 
@@ -158,24 +158,18 @@ export default function Home() {
           </section>
         )}
 
-        {/* Línea dulce */}
-        {lineas.some((l) => l.id === 'dulce') && (
-          <section className="mt-6">
-            <Link
-              to="/configurar?linea=dulce"
-              className="vt-sello btn-tap flex items-center gap-4 rounded-3xl p-4"
-            >
-              <IconoDulce size={40} color="#b8742c" />
-              <span className="min-w-0 flex-1">
-                <span className="vt-titulo block text-lg leading-tight">¡Nueva línea dulce!</span>
-                <span className="vt-cuerpo block text-sm italic opacity-75">
-                  Nutella, chocolate, manjar, piña, mango y más — desde {fmtCLP(settings?.lineas?.dulce?.precioMinEmpanada ?? 2790)}
-                </span>
-              </span>
-              <span className="vt-btn flex-shrink-0 rounded-xl px-3 py-2 text-xs">Probar →</span>
-            </Link>
-          </section>
-        )}
+        {/* Líneas: salada y dulce — la inactiva sale "Próximamente" y bloqueada */}
+        <section className="mt-6">
+          <h2 className="vt-titulo mb-2 text-xl">Nuestras líneas</h2>
+          <p className="vt-cuerpo mb-2 text-sm italic opacity-60">
+            Elige qué línea quieres armar. Las pausadas aparecen como “Próximamente”.
+          </p>
+          <div className="space-y-3">
+            {lineasTodas.map((l) => (
+              <LineaCard key={l.id} linea={l} settings={settings} />
+            ))}
+          </div>
+        </section>
 
         {/* Ranking en vivo */}
         {ranking.length > 0 && (
@@ -266,5 +260,58 @@ function Stat({ valor, label, sufijo }) {
       <p className="vt-serif text-[10px] font-bold uppercase tracking-wide opacity-60">{label}</p>
       {sufijo && <p className="vt-cuerpo text-[10px] italic opacity-50">{sufijo}</p>}
     </div>
+  );
+}
+
+// Tarjeta de línea (salada / dulce). Si está activa es clicable; si no,
+// aparece en gris con un candado y el sello "Próximamente" (bloqueada).
+function LineaCard({ linea, settings }) {
+  const esDulce = linea.id === 'dulce';
+  const icono = esDulce
+    ? <IconoDulce size={38} color="#b8742c" />
+    : <IconoEmpanada size={38} />;
+  const precioMin = esDulce
+    ? (settings?.lineas?.dulce?.precioMinEmpanada ?? 2790)
+    : (settings?.precios?.precioMinEmpanada ?? 3490);
+
+  if (!linea.activa) {
+    return (
+      <div className="vt-sello flex items-center gap-4 rounded-3xl p-4 opacity-70 grayscale">
+        <span className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full border-2 border-[#4a2c17]/25 bg-[#4a2c17]/8">
+          <IconoCandado size={26} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="vt-serif inline-flex items-center gap-1 rounded-full border-2 border-[#8b4513]/40 bg-[#8b4513]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#8b4513]">
+            Próximamente
+          </span>
+          <span className="vt-titulo mt-1 block text-lg leading-tight">
+            {esDulce ? '¡Línea dulce!' : 'Línea salada'}
+          </span>
+          <span className="vt-cuerpo block text-sm italic opacity-75">
+            {esDulce ? 'Nutella, chocolate, manjar, piña, mango y más' : 'Carne, pollo, camarón, vegano y más'}
+          </span>
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      to={esDulce ? '/configurar?linea=dulce' : '/configurar'}
+      className="vt-sello btn-tap flex items-center gap-4 rounded-3xl p-4"
+    >
+      <span className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full border-2 border-[#4a2c17]/25 bg-[#4a2c17]/8">
+        {icono}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="vt-titulo block text-lg leading-tight">
+          {esDulce ? '¡Nueva línea dulce!' : 'Línea salada'}
+        </span>
+        <span className="vt-cuerpo block text-sm italic opacity-75">
+          {esDulce ? 'Nutella, chocolate, manjar, piña, mango y más' : 'Carne, pollo, camarón, vegano y más'} — desde {fmtCLP(precioMin)}
+        </span>
+      </span>
+      <span className="vt-btn flex-shrink-0 rounded-xl px-3 py-2 text-xs">Probar →</span>
+    </Link>
   );
 }

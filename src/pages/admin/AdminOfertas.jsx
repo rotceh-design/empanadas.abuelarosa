@@ -77,7 +77,7 @@ export default function AdminOfertas() {
       </div>
 
       <p className="vt-serif mt-2 text-[11px] font-bold uppercase tracking-widest opacity-50">
-        Datos: {fuente} · cambios {fuente === 'firestore' ? 'sincronizados' : 'guardados en este equipo'}
+        Datos: {fuente} · cambios {fuente === 'supabase' ? 'sincronizados' : 'guardados en este equipo'}
       </p>
 
       {msg && <p className="mt-2 rounded-xl bg-verde-400/15 px-3 py-2 text-sm font-bold text-verde-600">{msg}</p>}

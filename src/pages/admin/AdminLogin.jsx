@@ -23,7 +23,7 @@ export default function AdminLogin() {
       }
       navigate('/admin', { replace: true });
     } catch (err) {
-      setError(err?.message?.replace('Firebase: ', '') || 'No se pudo iniciar sesión');
+      setError(err?.message || 'No se pudo iniciar sesión');
     } finally {
       setCargando(false);
     }

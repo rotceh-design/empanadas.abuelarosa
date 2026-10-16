@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { collection, onSnapshot, doc } from 'firebase/firestore';
-import { db, isFirebaseConfigured } from '../lib/firebase';
+import {
+  isSupabaseConfigured,
+  suscribirTabla, mapIngredient, mapDrink, mapOffer, mapRule, mapBadge, mapStats, mapSettings,
+} from '../lib/supabase';
 import {
   CATALOGO_SEED, BEBIDAS_SEED, OFERTAS_SEED, SETTINGS_SEED,
   REGLAS_SEED, INSIGNIAS_SEED,
@@ -31,52 +33,59 @@ export function CatalogProvider({ children }) {
   const [reglas, setReglas] = useState(local.reglas);
   const [insignias, setInsignias] = useState(local.insignias);
   const [stats, setStats] = useState({});
-  const [fuente, setFuente] = useState(isFirebaseConfigured ? 'cargando' : 'local');
-  const [overlay, setOverlay] = useState(() => (isFirebaseConfigured ? null : leerOverlayInicial()));
+  const [fuente, setFuente] = useState(isSupabaseConfigured ? 'cargando' : 'local');
+  const [overlay, setOverlay] = useState(() => (isSupabaseConfigured ? null : leerOverlayInicial()));
 
   useEffect(() => {
-    if (isFirebaseConfigured) return undefined;
+    if (isSupabaseConfigured) return undefined;
     return suscribirOverlay((ov) => setOverlay({ ...ov }));
   }, []);
 
   useEffect(() => {
-    if (!isFirebaseConfigured) return undefined;
-    const unsubs = [];
-    try {
-      unsubs.push(onSnapshot(collection(db, 'ingredients'), (snap) => {
-        if (snap.empty) return;
-        setIngredientes(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-        setFuente('firestore');
-      }, () => setFuente('local')));
+    if (!isSupabaseConfigured) return undefined;
 
-      unsubs.push(onSnapshot(collection(db, 'drinks'), (snap) => {
-        if (!snap.empty) setBebidas(snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.orden - b.orden));
-      }, () => {}));
+    const sinDatos = () => setFuente('local');
 
-      unsubs.push(onSnapshot(collection(db, 'offers'), (snap) => {
-        if (!snap.empty) setOfertas(snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.orden - b.orden));
-      }, () => {}));
+    const unsubs = [
+      suscribirTabla({
+        tabla: 'ingredients', mapa: mapIngredient,
+        onChange: (lista) => {
+          if (!lista.length) return;
+          setIngredientes(lista);
+          setFuente('supabase');
+        },
+        onErr: sinDatos,
+      }),
+      suscribirTabla({
+        tabla: 'drinks', mapa: mapDrink, ordenarPor: 'orden',
+        onChange: (lista) => { if (lista.length) setBebidas(lista); },
+      }),
+      suscribirTabla({
+        tabla: 'offers', mapa: mapOffer, ordenarPor: 'orden',
+        onChange: (lista) => { if (lista.length) setOfertas(lista); },
+      }),
+      suscribirTabla({
+        tabla: 'settings', unaFila: true, idFila: 'main', mapa: mapSettings,
+        onChange: (data) => { if (data) setSettings({ ...SETTINGS_SEED, ...data }); },
+      }),
+      suscribirTabla({
+        tabla: 'rules', mapa: mapRule,
+        onChange: (lista) => { if (lista.length) setReglas(lista); },
+      }),
+      suscribirTabla({
+        tabla: 'badges', mapa: mapBadge,
+        onChange: (lista) => { if (lista.length) setInsignias(lista); },
+      }),
+      suscribirTabla({
+        tabla: 'stats', mapa: mapStats,
+        onChange: (lista) => {
+          const s = {};
+          lista.forEach((r) => { s[r.id] = r; });
+          setStats(s);
+        },
+      }),
+    ];
 
-      unsubs.push(onSnapshot(doc(db, 'settings', 'main'), (snap) => {
-        if (snap.exists()) setSettings({ ...SETTINGS_SEED, ...snap.data() });
-      }, () => {}));
-
-      unsubs.push(onSnapshot(collection(db, 'rules'), (snap) => {
-        if (!snap.empty) setReglas(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      }, () => {}));
-
-      unsubs.push(onSnapshot(collection(db, 'badges'), (snap) => {
-        if (!snap.empty) setInsignias(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      }, () => {}));
-
-      unsubs.push(onSnapshot(collection(db, 'stats'), (snap) => {
-        const s = {};
-        snap.docs.forEach((d) => { s[d.id] = d.data(); });
-        setStats(s);
-      }, () => {}));
-    } catch {
-      setFuente('local');
-    }
     return () => unsubs.forEach((u) => u());
   }, []);
 
@@ -99,18 +108,26 @@ export function CatalogProvider({ children }) {
     const dulce = porLinea('dulce');
     const cantDulce = conf?.lineas?.dulce?.cantidadAcompanamientos ?? 1;
 
-    const lineas = [];
-    if (conf?.lineas?.salada?.activa !== false) {
-      lineas.push({ id: 'salada', nombre: 'Salada', ...salada, cantidadAcompanamientos: 4, total: totalCombinaciones({ ...salada, cantidadAcompanamientos: 4 }) });
-    }
-    if (conf?.lineas?.dulce?.activa) {
-      lineas.push({
-        id: 'dulce', nombre: 'Dulce', ...dulce,
+    const saladaActiva = conf?.lineas?.salada?.activa !== false;
+    const dulceActiva = Boolean(conf?.lineas?.dulce?.activa);
+
+    // Ambas líneas con su flag `activa`, para que la tienda las muestre
+    // aunque estén apagadas (como "Próximamente" y bloqueadas).
+    const lineasTodas = [
+      {
+        id: 'salada', nombre: 'Salada', activa: saladaActiva, ...salada,
+        cantidadAcompanamientos: 4,
+        total: totalCombinaciones({ ...salada, cantidadAcompanamientos: 4 }),
+      },
+      {
+        id: 'dulce', nombre: 'Dulce', activa: dulceActiva, ...dulce,
         quesos: salada.quesos,
         cantidadAcompanamientos: cantDulce,
         total: totalCombinaciones({ ...dulce, quesos: salada.quesos, cantidadAcompanamientos: cantDulce }),
-      });
-    }
+      },
+    ];
+    // Solo las activas: alimenta precios, daily, ruleta y el builder.
+    const lineas = lineasTodas.filter((l) => l.activa);
 
     const porId = Object.fromEntries(ings.map((i) => [i.id, i]));
     const bebidasTodas = ordenar(bebs);
@@ -119,7 +136,7 @@ export function CatalogProvider({ children }) {
     return {
       ingredientes: ings, porId, bebidas: bebidasDisp, bebidasTodas,
       ofertas: ordenar(base.ofertas), settings: conf, reglas: base.reglas, insignias, stats,
-      lineas, fuente,
+      lineas, lineasTodas, fuente,
       precioBase: conf?.precios?.empanadaBase ?? 2990,
       precios: conf?.precios ?? SETTINGS_SEED.precios,
       whatsapp: conf?.negocio?.whatsapp ?? SETTINGS_SEED.negocio.whatsapp,

@@ -1,8 +1,4 @@
-import {
-  collection, addDoc, doc, getDoc, setDoc, increment, runTransaction,
-  query, orderBy, limit, onSnapshot,
-} from 'firebase/firestore';
-import { db, isFirebaseConfigured } from './firebase';
+import { supabase, isSupabaseConfigured, mapOrder } from './supabase';
 import { uid } from './formato';
 import { signoStock } from './stock';
 import { aplicarStock } from './inventario';
@@ -23,9 +19,9 @@ function localEscribir(lista) {
 }
 
 export function observarPedidos(cb) {
-  if (!isFirebaseConfigured) {
+  if (!isSupabaseConfigured) {
     oyentes.add(cb);
-    // Otra pestaña (la tienda) que escriba el mismo storage: Firestore no
+    // Otra pestaña (la tienda) que escriba el mismo storage: Supabase no
     // existe en modo demo, así que este evento es su equivalente local.
     const enOtraPestana = (e) => { if (e.key === KEY) cb(localLeer()); };
     if (typeof window !== 'undefined') window.addEventListener('storage', enOtraPestana);
@@ -35,110 +31,118 @@ export function observarPedidos(cb) {
       if (typeof window !== 'undefined') window.removeEventListener('storage', enOtraPestana);
     };
   }
-  try {
-    const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(200));
-    return onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))), () => cb(localLeer()));
-  } catch {
-    cb(localLeer());
-    return () => {};
-  }
+
+  let cancelado = false;
+  const cargar = async () => {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(200);
+    if (cancelado) return;
+    if (error) { console.warn('No se pudieron leer los pedidos:', error); return; }
+    cb((data || []).map(mapOrder));
+  };
+
+  cargar();
+
+  // Realtime: recargamos la lista ante cualquier cambio (más simple y
+  // consistente que reconstruir desde los payloads individuales).
+  const canal = supabase
+    .channel(`pedidos-${uid()}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => cargar())
+    .subscribe();
+
+  return () => { cancelado = true; supabase.removeChannel(canal); };
 }
 
 export async function crearPedido(pedido) {
   const numero = await siguienteNumero();
   const data = {
-    ...pedido,
     numero,
     status: 'pendiente_pago',
-    createdAt: new Date().toISOString(),
+    cliente: pedido.cliente || {},
+    items: pedido.items || [],
+    totales: pedido.totales || {},
+    oferta: pedido.oferta || null,
+    entrega: pedido.entrega || null,
+    etiquetas: pedido.etiquetas || [],
+    comprobante: pedido.comprobante || null,
+    fuente: pedido.fuente || 'web',
   };
 
-  if (!isFirebaseConfigured) {
+  if (!isSupabaseConfigured) {
     const lista = localLeer();
-    lista.unshift({ id: uid(), ...data });
+    const createdAt = new Date().toISOString();
+    lista.unshift({ id: uid(), ...data, createdAt, stockDescontado: false });
     localEscribir(lista);
-    return { id: lista[0].id, ...data };
+    return { id: lista[0].id, ...data, createdAt };
   }
 
   try {
-    const ref = await addDoc(collection(db, 'orders'), data);
+    const { data: fila, error } = await supabase
+      .from('orders')
+      .insert(data)
+      .select()
+      .single();
+    if (error) throw error;
     await registrarStats(pedido);
     await registrarCliente(pedido);
-    return { id: ref.id, ...data };
-  } catch {
+    return mapOrder(fila);
+  } catch (e) {
+    console.warn('No se pudo crear el pedido en Supabase, se guarda local:', e);
     const lista = localLeer();
-    lista.unshift({ id: uid(), ...data });
+    const createdAt = new Date().toISOString();
+    lista.unshift({ id: uid(), ...data, createdAt, stockDescontado: false });
     localEscribir(lista);
-    return { id: lista[0].id, ...data };
+    return { id: lista[0].id, ...data, createdAt };
   }
 }
 
 // Reserva el siguiente número de pedido de forma atómica: dos pedidos
 // simultáneos nunca pueden quedarse con el mismo número.
 async function siguienteNumero() {
-  if (!isFirebaseConfigured) return localLeer().length + 101;
-  const ref = doc(db, 'counters', 'orders');
-  for (let intento = 0; intento < 3; intento++) {
-    try {
-      let siguiente = 101;
-      await runTransaction(db, async (tx) => {
-        const snap = await tx.get(ref);
-        const actual = snap.exists() ? Number(snap.data().valor) || 100 : 100;
-        siguiente = actual + 1;
-        tx.set(ref, { valor: siguiente }, { merge: true });
-      });
-      return siguiente;
-    } catch (e) {
-      if (intento === 2) console.warn('No se pudo reservar el número de pedido:', e);
-    }
+  if (!isSupabaseConfigured) return localLeer().length + 101;
+  try {
+    const { data, error } = await supabase.rpc('next_order_number');
+    if (error) throw error;
+    return data;
+  } catch (e) {
+    console.warn('No se pudo reservar el número de pedido:', e);
+    return Math.floor(Math.random() * 9000) + 100;
   }
-  // Último recurso si Firestore no está disponible: número no persistido.
-  return Math.floor(Math.random() * 9000) + 100;
 }
 
 async function registrarStats(pedido) {
-  if (!isFirebaseConfigured) return;
+  if (!isSupabaseConfigured) return;
   try {
     const empanadas = pedido.items?.filter((i) => i.tipo === 'empanada') || [];
     for (const e of empanadas) {
       if (!e.clave) continue;
-      await runTransaction(db, async (tx) => {
-        const ref = doc(db, 'stats', e.clave);
-        const snap = await tx.get(ref);
-        const actual = snap.exists() ? snap.data().count || 0 : 0;
-        tx.set(ref, {
-          count: actual + (e.cantidad || 1),
-          nombre: e.nombre,
-          emojis: e.emojis || [],
-          proteinaId: e.proteinaId,
-          quesoId: e.quesoId,
-          acompanamientosIds: e.acompanamientosIds || [],
-        }, { merge: true });
+      const { error } = await supabase.rpc('register_order_stats', {
+        p_clave: e.clave,
+        p_nombre: e.nombre,
+        p_emojis: e.emojis || [],
+        p_proteina_id: e.proteinaId,
+        p_queso_id: e.quesoId,
+        p_acomp_ids: e.acompanamientosIds || [],
+        p_cantidad: e.cantidad || 1,
       });
+      if (error) throw error;
     }
-    const refC = doc(db, 'counters', 'combinaciones');
-    const snapC = await getDoc(refC);
-    if (snapC.exists()) await setDoc(refC, { valor: increment(1) }, { merge: true });
-    else await setDoc(refC, { valor: 1 });
   } catch { /* noop */ }
 }
 
 async function registrarCliente(pedido) {
-  if (!isFirebaseConfigured || !pedido.cliente?.telefono) return;
+  if (!isSupabaseConfigured || !pedido.cliente?.telefono) return;
   try {
-    const ref = doc(db, 'customers', pedido.cliente.telefono.replace(/\s/g, ''));
-    const snap = await getDoc(ref);
-    const base = snap.exists() ? snap.data() : { puntos: 0, pedidos: 0, creado: new Date().toISOString() };
-    await setDoc(ref, {
-      ...base,
-      nombre: pedido.cliente.nombre,
-      telefono: pedido.cliente.telefono,
-      comuna: pedido.cliente.comuna,
-      pedidos: (base.pedidos || 0) + 1,
-      puntos: (base.puntos || 0) + 50,
-      ultimaCombinacion: pedido.items?.find((i) => i.tipo === 'empanada')?.clave || null,
-      ultimaFecha: new Date().toISOString(),
-    }, { merge: true });
+    const { error } = await supabase.rpc('upsert_customer', {
+      p_telefono: pedido.cliente.telefono,
+      p_nombre: pedido.cliente.nombre,
+      p_comuna: pedido.cliente.comuna,
+      p_clave: pedido.items?.find((i) => i.tipo === 'empanada')?.clave || null,
+    });
+    if (error) throw error;
   } catch { /* noop */ }
 }
 
@@ -154,25 +158,28 @@ export const ESTADOS = [
 // (ctx = { porId, bebidas, settings } desde el catálogo).
 export async function cambiarEstado(pedido, status, ctx = null) {
   const orderId = typeof pedido === 'object' ? pedido?.id : pedido;
-  const campos = { status, actualizadoEn: new Date().toISOString() };
+  const campos = { status, updated_at: new Date().toISOString() };
 
   const signo = ctx && typeof pedido === 'object' ? signoStock(pedido, status) : 0;
   if (signo !== 0) {
     try {
       await aplicarStock(pedido, signo, ctx);
-      campos.stockDescontado = signo === 1;
+      campos.stock_descontado = signo === 1;
     } catch (e) {
       console.warn('No se pudo ajustar el stock:', e);
     }
   }
 
-  if (!isFirebaseConfigured) {
-    const lista = localLeer().map((o) => (o.id === orderId ? { ...o, ...campos } : o));
+  if (!isSupabaseConfigured) {
+    const lista = localLeer().map((o) => (o.id === orderId
+      ? { ...o, status, actualizadoEn: campos.updated_at, stockDescontado: campos.stock_descontado ?? o.stockDescontado }
+      : o));
     localEscribir(lista);
     return;
   }
   try {
-    await setDoc(doc(db, 'orders', orderId), campos, { merge: true });
+    const { error } = await supabase.from('orders').update(campos).eq('id', orderId);
+    if (error) throw error;
   } catch { /* noop */ }
 }
 

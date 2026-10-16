@@ -1,4 +1,4 @@
-# 🚀 Despliegue en Firebase Hosting
+# 🚀 Despliegue
 
 Guía paso a paso para publicar la app y el panel admin.
 
@@ -7,20 +7,14 @@ Guía paso a paso para publicar la app y el panel admin.
 ## 1. Requisitos
 
 - Node.js 20+
-- Cuenta de Google con Firebase habilitado
-- CLI de Firebase: `npm i -g firebase-tools`
+- Cuenta de [Supabase](https://supabase.com)
 
 ## 2. Crear el proyecto
 
-```bash
-firebase login
-firebase init          # marca: Firestore, Functions, Hosting, Emulators (opcional)
-# Project: crea o selecciona uno nuevo
-# Public directory: dist
-# Single-page app: Yes
-# Firestore rules: firestore.rules
-# Functions: functions/
-```
+1. Crea un proyecto en Supabase.
+2. Abre **SQL Editor**, pega todo el contenido de [`supabase/schema.sql`](./supabase/schema.sql) y presiona **Run**.
+   - Es idempotente: puedes correrlo más de una vez sin romper nada.
+   - Crea las tablas, permisos (RLS), las RPCs y el catálogo inicial (seed).
 
 ## 3. Variables de entorno (frontend)
 
@@ -32,80 +26,61 @@ cp .env.example .env
 
 | Variable | Descripción |
 |----------|-------------|
-| `VITE_FIREBASE_API_KEY` | Clave API del proyecto |
-| `VITE_FIREBASE_AUTH_DOMAIN` | `tu-proyecto.firebaseapp.com` |
-| `VITE_FIREBASE_PROJECT_ID` | ID del proyecto |
-| `VITE_FIREBASE_STORAGE_BUCKET` | `tu-proyecto.appspot.com` |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | ID del remitente |
-| `VITE_FIREBASE_APP_ID` | ID de la app web |
-| `VITE_USE_FIREBASE_EMULATOR` | `1` para desarrollo local con emuladores |
-| `VITE_AI_RECOMMEND_URL` | URL pública de la Cloud Function (opcional) |
+| `VITE_SUPABASE_URL` | URL del proyecto (Project Settings → API) |
+| `VITE_SUPABASE_ANON_KEY` | Clave `anon` / publishable (Project Settings → API) |
 
-Las claves de Firebase web son públicas por diseño; la seguridad real está en las reglas de Firestore y en las Cloud Functions.
+La clave `anon` es **pública** por diseño; la seguridad real la da el Row Level Security definido en `supabase/schema.sql`.
 
-## 4. Cargar el catálogo inicial (seed)
+## 4. Build y deploy
+
+La app es un SPA estática (Vite). Publícala en el hosting que prefieras (Netlify, Vercel, Cloudflare Pages, etc.):
 
 ```bash
-# Opción A: con archivo de cuenta de servicio
-export FIREBASE_SERVICE_ACCOUNT=./mi-cuenta.json
-node scripts/seed.mjs
-
-# Opción B: con las credenciales por defecto (tras `gcloud auth application-default login`)
-node scripts/seed.mjs
+npm run build      # genera dist/
 ```
 
-Esto sube: `ingredients`, `drinks`, `offers`, `rules`, `badges`, `settings/main` y `counters`.
+Configura el host para servir `dist/` y redirigir todas las rutas a `index.html` (SPA fallback).
 
-## 5. Build y deploy
+## 5. Panel admin
 
-```bash
-npm run build
-firebase deploy --only hosting
-# Firestore (reglas + índices):
-firebase deploy --only firestore
-# Cloud Functions (recomendador IA):
-cd functions && npm install && cd ..
-firebase deploy --only functions
+1. En **Supabase → Authentication → Users**, crea el usuario de la dueña.
+2. Ve a **SQL Editor** y mărcalo como admin (reemplaza el correo si usas otro):
+
+```sql
+insert into public.profiles (id, email, is_admin)
+select id, email, true
+from auth.users
+where email = 'admin@abuelarosa.cl'
+on conflict (id) do update set is_admin = true;
 ```
 
-## 6. Configurar la API key de Claude (solo servidor)
+3. Abre `https://TU-DOMINIO/admin/login` e inicia sesión.
 
-La clave **nunca** va en el frontend. Se guarda como secreto de Functions:
+> El RLS también acepta como admin al correo `admin@abuelarosa.cl` sin necesidad de fila en `profiles`, pero crearla es lo recomendado.
 
-```bash
-firebase functions:secrets:set ANTHROPIC_API_KEY
-# pega tu clave cuando lo solicite
-```
-
-La función `recomendar` la lee desde `process.env.ANTHROPIC_API_KEY`. Si no está configurada o falla, el cliente cae automáticamente a reglas locales.
-
-## 7. Panel admin
-
-1. Crea el usuario en **Firebase Console → Authentication → Users → Add user**.
-2. Asigna el custom claim `admin: true` (ver `ESQUEMA.md`).
-3. Ve a `https://TU-DOMINIO/admin/login` e inicia sesión.
-
-## 8. (Opcional) Pago online desactivado
+## 6. (Opcional) Pago online desactivado
 
 El punto de integración de pago directo está listo pero **deshabilitado**. Actívalo desde el admin → Configuración → `pago.onlineActivo` cuando quieras conectar una pasarela (Flow, Webpay, Mercado Pago).
 
+## 7. Recomendador (IA)
+
+Hoy el recomendador es **100 % local** (determinista, sin dependencias). El endpoint de IA se puede conectar más adelante con una Edge Function de Supabase; hasta entonces no hay nada que configurar.
+
 ---
 
-## Desarrollo local con emuladores
+## Modo demo (sin backend)
 
-```bash
-firebase emulators:start --only firestore,auth,functions
-# en .env: VITE_USE_FIREBASE_EMULATOR=1
-npm run dev
-```
+Si no existen las variables `.env`, o se fuerza con `VITE_SUPABASE_OFF=1`, la app corre en **modo demo**: usa el catálogo de `src/data/catalogoSeed.js` y guarda pedidos y ediciones del admin en `localStorage`. Ideal para probar todo el flujo sin tocar la base real.
 
 ---
 
 ## Comandos útiles
 
 ```bash
-npm run dev      # desarrollo
-npm run build    # build de producción
-npm run lint     # linter (oxlint)
-npm run preview  # previsualizar el build
+npm run dev        # desarrollo
+npm run build      # build de producción
+npm run lint       # linter (oxlint)
+npm run test       # tests de lógica (corren en modo demo)
+npm run test:e2e   # tests end-to-end del panel (modo demo)
+npm run preview    # previsualizar el build
 ```

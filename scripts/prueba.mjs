@@ -205,10 +205,19 @@ ok('dulce: 4 quesos (los salada)', lineaDulce.quesos.length, 4);
 ok('dulce: 11 extras', lineaDulce.acompanamientos.length, 11);
 ok('total combinaciones dulce = 176', totalCombinaciones(lineaDulce), 176);
 
-// Nombre dulce: relleno + queso salada + extra
+// Nombre profesional: proteína con queso, sin apodos inventados
 import { generarNombre } from '../src/lib/nombres.js';
-const nombreDulce = generarNombre({ proteina: porId.d_nutella, queso: porId.q_gouda, acompanamientos: [porId.d_mani] });
-ok('nombre dulce generado', typeof nombreDulce === 'string' && nombreDulce.length > 0 ? 'si' : 'no', 'si');
+ok('nombre salada descriptivo',
+  generarNombre({ proteina: porId.p_pollo, queso: porId.q_gouda }), 'Pollo con Gouda');
+ok('nombre dulce descriptivo',
+  generarNombre({ proteina: porId.d_nutella, queso: porId.q_gouda }), 'Nutella con Gouda');
+ok('nombre sin queso = solo proteína',
+  generarNombre({ proteina: porId.p_carne, queso: null }), 'Carne picada');
+ok('nombre sin nada = Empanada',
+  generarNombre({ proteina: null, queso: null }), 'Empanada');
+const nombreDulce = generarNombre({ proteina: porId.d_nutella, queso: porId.q_gouda });
+si('nombre no lleva sufijos inventados',
+  !/(express|premium|v2|xl|abuela|fiestera|tentación|poderoso)/i.test(nombreDulce));
 
 // Inventario: rendimiento en empanadas, alertas, consumo por pedido y signos
 import { rendimientoEmpanadas, alertasStock, consumoStockPedido, signoStock, UMBRAL_DEFECTO } from '../src/lib/stock.js';
@@ -353,7 +362,7 @@ import { desgloseDeItem } from '../src/lib/precios.js';
 
 const itemCarro = {
   linea: 'salada',
-  nombre: 'La Clásica de la Casa de la Abuela',
+  nombre: 'Carne picada con Gouda',
   proteinaId: 'p_carne', quesoId: 'q_gouda',
   acompanamientosIds: ['a_tomate', 'a_choclo', 'a_champinon', 'a_palmitos'],
   extras: { proteina: false, queso: false, acomp: [] },

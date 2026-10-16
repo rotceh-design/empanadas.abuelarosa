@@ -5,16 +5,21 @@ import { useCatalog } from '../../contexts/CatalogContext';
 import { observarPedidos } from '../../lib/pedidos';
 import { alertasStock } from '../../lib/stock';
 import { play } from '../../lib/sonidos';
+import logoAbuela from '../../assets/abuela-rosa.png';
+import {
+  IconoPanel, IconoPedidos, IconoCatalogo, IconoInventario,
+  IconoOfertas, IconoProduccion, IconoMetricas, IconoConfig,
+} from '../../components/IconosAdmin';
 
 const TABS = [
-  { to: '/admin', icon: '📊', label: 'Panel', fin: true },
-  { to: '/admin/pedidos', icon: '🧾', label: 'Pedidos' },
-  { to: '/admin/catalogo', icon: '🥟', label: 'Catálogo' },
-  { to: '/admin/inventario', icon: '📦', label: 'Inventario' },
-  { to: '/admin/ofertas', icon: '🎁', label: 'Ofertas' },
-  { to: '/admin/produccion', icon: '🏭', label: 'Producción' },
-  { to: '/admin/metricas', icon: '📈', label: 'Métricas' },
-  { to: '/admin/config', icon: '⚙️', label: 'Config' },
+  { to: '/admin', icon: IconoPanel, label: 'Panel', fin: true },
+  { to: '/admin/pedidos', icon: IconoPedidos, label: 'Pedidos' },
+  { to: '/admin/catalogo', icon: IconoCatalogo, label: 'Catálogo' },
+  { to: '/admin/inventario', icon: IconoInventario, label: 'Inventario' },
+  { to: '/admin/ofertas', icon: IconoOfertas, label: 'Ofertas' },
+  { to: '/admin/produccion', icon: IconoProduccion, label: 'Producción' },
+  { to: '/admin/metricas', icon: IconoMetricas, label: 'Métricas' },
+  { to: '/admin/config', icon: IconoConfig, label: 'Config' },
 ];
 
 export default function AdminLayout() {
@@ -81,12 +86,16 @@ export default function AdminLayout() {
     <div className="vt-papel vt-tinta min-h-screen">
       <header className="sticky top-0 z-40 border-b-[3px] border-[#4a2c17] bg-[#f3e6c8]/95 shadow-[0_10px_24px_-16px_rgb(42_22_11/0.6)] backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🥟</span>
+          <div className="flex items-center gap-2.5">
+            <img
+              src={logoAbuela}
+              alt="Empanadas Abuela Rosa"
+              className="h-10 w-10 flex-shrink-0 rounded-full border-2 border-[#4a2c17]/40 object-cover shadow-[0_2px_6px_-2px_rgb(42_22_11/0.5)]"
+            />
             <div>
               <p className="vt-titulo text-base leading-none">Panel Abuela Rosa</p>
               <p className="vt-serif text-[11px] font-bold uppercase tracking-widest opacity-60">
-                {demo ? 'Modo demo (sin Firebase)' : `Datos: ${fuente}`}
+                {demo ? 'Modo demo (sin Supabase)' : `Datos: ${fuente}`}
               </p>
             </div>
           </div>
@@ -118,14 +127,15 @@ export default function AdminLayout() {
               to={t.to}
               end={t.fin}
               className={({ isActive }) =>
-                `btn-tap vt-serif flex-shrink-0 rounded-lg border-2 px-3 py-1.5 text-xs font-bold uppercase tracking-wide ${
+                `btn-tap vt-serif flex flex-shrink-0 items-center gap-1.5 rounded-lg border-2 px-3 py-1.5 text-xs font-bold uppercase tracking-wide ${
                   isActive
                     ? 'border-[#4a2c17] bg-[#4a2c17] text-[#f3e6c8] shadow-[0_3px_0_#2a160b]'
                     : 'border-[#4a2c17]/25 text-tierra-700 hover:border-[#4a2c17]/60 hover:bg-[#8b4513]/10'
                 }`
               }
             >
-              {t.icon} {t.label}
+              <t.icon size={15} className="flex-shrink-0" />
+              <span>{t.label}</span>
             </NavLink>
           ))}
         </nav>

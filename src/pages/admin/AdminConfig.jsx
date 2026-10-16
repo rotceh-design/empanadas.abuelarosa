@@ -1,15 +1,22 @@
-import { useState } from 'react';
-import { doc, setDoc } from 'firebase/firestore';
-import { db, isFirebaseConfigured } from '../../lib/firebase';
+import { useEffect, useState } from 'react';
+import { guardarSettingsPatch } from '../../lib/inventario';
 import { useCatalog } from '../../contexts/CatalogContext';
 import { combinacionDelDia } from '../../lib/daily';
 
 export default function AdminConfig() {
   const { settings, lineas, porId } = useCatalog();
   const [form, setForm] = useState(settings);
+  const [dirty, setDirty] = useState(false);
   const [msg, setMsg] = useState('');
 
+  // Si settings carga después de montar (Supabase/realtime) y el usuario
+  // no ha tocado nada, sincronizamos el form para no arrastrar la semilla.
+  useEffect(() => {
+    if (!dirty) setForm(settings);
+  }, [settings, dirty]);
+
   const set = (ruta, valor) => {
+    setDirty(true);
     setForm((f) => {
       const copia = JSON.parse(JSON.stringify(f));
       const partes = ruta.split('.');
@@ -21,15 +28,20 @@ export default function AdminConfig() {
   };
 
   const guardar = async () => {
-    if (!isFirebaseConfigured) { setMsg('⚠️ Activa Firebase para guardar.'); return; }
-    await setDoc(doc(db, 'settings', 'main'), form, { merge: true });
-    setMsg('✓ Configuración guardada');
+    setMsg('⏳ Guardando…');
+    try {
+      await guardarSettingsPatch(form);
+      setMsg('✓ Configuración guardada');
+    } catch (e) {
+      console.error('No se pudo guardar la configuración:', e);
+      setMsg('⚠️ No se pudo guardar. Revisa la conexión e inténtalo de nuevo.');
+    }
   };
 
   return (
     <div>
       <h1 className="vt-titulo text-3xl">Configuración</h1>
-      <p className="vt-cuerpo text-sm italic opacity-60">Todo lo que ves aquí se guarda en Firestore y se aplica al instante</p>
+      <p className="vt-cuerpo text-sm italic opacity-60">Todo lo que ves aquí se guarda en Supabase y se aplica al instante</p>
       {msg && <p className="mt-2 rounded-xl bg-verde-400/15 px-3 py-2 text-sm font-bold text-verde-600">{msg}</p>}
 
       <div className="mt-4 space-y-4">

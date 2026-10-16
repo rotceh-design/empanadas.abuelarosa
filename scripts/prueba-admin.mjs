@@ -1,4 +1,4 @@
-// Pruebas del flujo de administración en modo local/demo (sin Firebase).
+// Pruebas del flujo de administración en modo local/demo (sin backend).
 // Cubre: altas de pedido, numeración, observador, máquina de estados con
 // descuento/devolución de stock, CRUD de catálogo y ofertas, patch de
 // settings, historial de movimientos y carga de las páginas del panel.

@@ -1,10 +1,6 @@
-// Persistencia de inventario dual: Firestore cuando está configurado,
+// Persistencia de inventario dual: Supabase cuando está configurado,
 // localStorage (overlay sobre los seeds) cuando corre en modo demo/local.
-import {
-  collection, doc, setDoc, deleteDoc, addDoc, getDocs, writeBatch,
-  query, orderBy, limit,
-} from 'firebase/firestore';
-import { db, isFirebaseConfigured } from './firebase';
+import { supabase, isSupabaseConfigured } from './supabase';
 import { consumoStockPedido } from './stock';
 
 const KEY = 'empanadas_admin_local';
@@ -70,8 +66,10 @@ function campoDe(coleccion) {
 
 // Alta/edición de documentos de catálogo ('ingredients' | 'drinks' | 'offers' | …).
 export async function guardarDoc(coleccion, id, datos) {
-  if (isFirebaseConfigured) {
-    await setDoc(doc(db, coleccion, id), datos, { merge: true });
+  if (isSupabaseConfigured) {
+    const fila = prepararFila(coleccion, datos);
+    const { error } = await supabase.from(coleccion).upsert({ id, ...fila }, { onConflict: 'id' });
+    if (error) throw error;
     return;
   }
   const campo = campoDe(coleccion);
@@ -85,8 +83,9 @@ export async function guardarDoc(coleccion, id, datos) {
 }
 
 export async function eliminarDoc(coleccion, id) {
-  if (isFirebaseConfigured) {
-    await deleteDoc(doc(db, coleccion, id));
+  if (isSupabaseConfigured) {
+    const { error } = await supabase.from(coleccion).delete().eq('id', id);
+    if (error) throw error;
     return;
   }
   const campo = campoDe(coleccion);
@@ -98,8 +97,24 @@ export async function eliminarDoc(coleccion, id) {
   escribirOverlay({ [campo]: mapa, eliminados: elim });
 }
 
-// Merge profundo de maps, igual que setDoc(..., { merge: true }) en Firestore:
-// un patch parcial { inventario: { umbral } } no pisa el resto de `inventario`.
+// Convierte la forma camelCase de la app a las columnas snake_case de Postgres.
+function prepararFila(coleccion, datos) {
+  const copia = { ...datos };
+  if (coleccion === 'ingredients') {
+    if ('porcionGramos' in copia) { copia.porcion_gramos = copia.porcionGramos; delete copia.porcionGramos; }
+    if ('costoKg' in copia) { copia.costo_kg = copia.costoKg; delete copia.costoKg; }
+    if ('stockGramos' in copia) { copia.stock_gramos = copia.stockGramos; delete copia.stockGramos; }
+  }
+  if (coleccion === 'drinks') {
+    if ('stockUnidades' in copia) { copia.stock_unidades = copia.stockUnidades; delete copia.stockUnidades; }
+  }
+  // Limpia undefined (Supabase los rechaza).
+  Object.keys(copia).forEach((k) => { if (copia[k] === undefined) delete copia[k]; });
+  return copia;
+}
+
+// Merge profundo de maps: un patch parcial { inventario: { umbral } } no pisa
+// el resto de `inventario`. Un patch parcial no pisa el resto del objeto.
 function fusionar(base, patch) {
   if (patch === undefined) return base;
   if (base === undefined || base === null) return patch;
@@ -112,8 +127,14 @@ function fusionar(base, patch) {
 
 // Patch de settings (p. ej. { inventario: { umbralEmpanadas: 10 } }).
 export async function guardarSettingsPatch(parcial) {
-  if (isFirebaseConfigured) {
-    await setDoc(doc(db, 'settings', 'main'), parcial, { merge: true });
+  if (isSupabaseConfigured) {
+    // settings vive en una sola fila (id='main') dentro del jsonb `data`.
+    const { data: row } = await supabase.from('settings').select('data').eq('id', 'main').maybeSingle();
+    const base = row?.data || {};
+    const nuevo = fusionar(base, parcial);
+    const { error } = await supabase.from('settings')
+      .upsert({ id: 'main', data: nuevo, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+    if (error) throw error;
     return;
   }
   const actual = leerOverlay();
@@ -126,55 +147,61 @@ export async function aplicarStock(pedido, signo, { porId = {}, bebidas = [], se
   if (!signo) return false;
   const consumo = consumoStockPedido(pedido, { porId, settings });
 
-  const parchesIng = {};
+  // Deltas con signo: la RPC hace `stock - delta` (consume > 0, devuelve < 0).
+  const deltasIng = {};
   Object.entries(consumo.ings).forEach(([id, gramos]) => {
     const ing = porId[id];
     if (!ing || typeof ing.stockGramos !== 'number') return;
-    parchesIng[id] = { stockGramos: Math.max(0, Math.round(ing.stockGramos - signo * gramos)) };
+    deltasIng[id] = Math.round(signo * gramos);
   });
 
-  const parchesBeb = {};
+  const deltasBeb = {};
   Object.entries(consumo.bebs).forEach(([id, unidades]) => {
     const b = bebidas.find((x) => x.id === id);
     if (!b || typeof b.stockUnidades !== 'number') return;
-    parchesBeb[id] = { stockUnidades: Math.max(0, b.stockUnidades - signo * unidades) };
+    deltasBeb[id] = signo * unidades;
   });
 
   const invActual = settings.inventario || {};
   const hayMasa = typeof invActual.masaGramos === 'number' && consumo.masaGramos > 0;
-  const masaGramos = hayMasa
-    ? Math.max(0, invActual.masaGramos - signo * consumo.masaGramos)
-    : invActual.masaGramos;
+  const masaDelta = hayMasa ? signo * consumo.masaGramos : 0;
 
-  if (!isFirebaseConfigured) {
-    Object.entries(parchesIng).forEach(([id, datos]) => parcheOverlay('ingredientes', id, datos));
-    Object.entries(parchesBeb).forEach(([id, datos]) => parcheOverlay('bebidas', id, datos));
-    if (hayMasa) guardarSettingsPatch({ inventario: { ...invActual, masaGramos } });
+  if (isSupabaseConfigured) {
+    // La RPC apply_stock hace el descuento/devolución de forma atómica en el servidor.
+    const { error } = await supabase.rpc('apply_stock', {
+      p_payload: {
+        ings: deltasIng,
+        bebs: deltasBeb,
+        masa_gramos: masaDelta,
+      },
+    });
+    if (error) throw error;
     return true;
   }
 
-  const batch = writeBatch(db);
-  Object.entries(parchesIng).forEach(([id, datos]) => {
-    batch.set(doc(db, 'ingredients', id), datos, { merge: true });
+  // Modo local: aplicamos los deltas sobre el overlay.
+  Object.entries(deltasIng).forEach(([id, delta]) => {
+    const ing = porId[id];
+    parcheOverlay('ingredientes', id, { stockGramos: Math.max(0, Math.round(ing.stockGramos - delta)) });
   });
-  Object.entries(parchesBeb).forEach(([id, datos]) => {
-    batch.set(doc(db, 'drinks', id), datos, { merge: true });
+  Object.entries(deltasBeb).forEach(([id, delta]) => {
+    const b = bebidas.find((x) => x.id === id);
+    parcheOverlay('bebidas', id, { stockUnidades: Math.max(0, b.stockUnidades - delta) });
   });
   if (hayMasa) {
-    batch.set(doc(db, 'settings', 'main'), { inventario: { ...invActual, masaGramos } }, { merge: true });
+    const masaGramos = Math.max(0, invActual.masaGramos - masaDelta);
+    guardarSettingsPatch({ inventario: { ...invActual, masaGramos } });
   }
-  await batch.commit();
   return true;
 }
 
 // Historial de movimientos (compras y conteos).
 export async function registrarMovimiento(entrada) {
-  // Firestore rechaza undefined: limpiamos los campos que no aplican a este movimiento.
   const data = Object.fromEntries(
     Object.entries({ ...entrada, fecha: new Date().toISOString() }).filter(([, v]) => v !== undefined),
   );
-  if (isFirebaseConfigured) {
-    try { await addDoc(collection(db, 'inventory_log'), data); } catch (e) { console.warn('No se registró el movimiento:', e); }
+  if (isSupabaseConfigured) {
+    try { await supabase.from('inventory_log').insert({ entrada: data, fecha: data.fecha }); } catch (e) { console.warn('No se registró el movimiento:', e); }
     return;
   }
   try {
@@ -185,10 +212,13 @@ export async function registrarMovimiento(entrada) {
 }
 
 export async function leerLog(n = 30) {
-  if (isFirebaseConfigured) {
+  if (isSupabaseConfigured) {
     try {
-      const snap = await getDocs(query(collection(db, 'inventory_log'), orderBy('fecha', 'desc'), limit(n)));
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const { data, error } = await supabase.from('inventory_log')
+        .select('*').order('fecha', { ascending: false }).limit(n);
+      if (error) throw error;
+      // Devuelve la misma forma que el modo local: { id, ...entrada, fecha }.
+      return (data || []).map((r) => ({ id: r.id, ...(r.entrada || {}), fecha: r.fecha }));
     } catch { return []; }
   }
   try {

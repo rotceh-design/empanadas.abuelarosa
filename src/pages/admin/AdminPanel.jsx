@@ -4,15 +4,19 @@ import { observarPedidos, ESTADOS } from '../../lib/pedidos';
 import { alertasStock } from '../../lib/stock';
 import { useCatalog } from '../../contexts/CatalogContext';
 import { fmtCLP } from '../../lib/formato';
+import {
+  IconoPedidos, IconoInventario, IconoCatalogo, IconoOfertas,
+  IconoProduccion, IconoMetricas, IconoConfig,
+} from '../../components/IconosAdmin';
 
 const ACCESOS = [
-  { to: '/admin/pedidos', icon: '🧾', label: 'Pedidos', desc: 'Estados y cobros' },
-  { to: '/admin/inventario', icon: '📦', label: 'Inventario', desc: 'Stock y merma' },
-  { to: '/admin/catalogo', icon: '🥟', label: 'Catálogo', desc: 'Ingredientes' },
-  { to: '/admin/ofertas', icon: '🎁', label: 'Ofertas', desc: 'Bundles y reglas' },
-  { to: '/admin/produccion', icon: '🏭', label: 'Producción', desc: 'Plan del día' },
-  { to: '/admin/metricas', icon: '📈', label: 'Métricas', desc: 'Ventas y margen' },
-  { to: '/admin/config', icon: '⚙️', label: 'Config', desc: 'Negocio y precios' },
+  { to: '/admin/pedidos', icon: IconoPedidos, label: 'Pedidos', desc: 'Estados y cobros' },
+  { to: '/admin/inventario', icon: IconoInventario, label: 'Inventario', desc: 'Stock y merma' },
+  { to: '/admin/catalogo', icon: IconoCatalogo, label: 'Catálogo', desc: 'Ingredientes' },
+  { to: '/admin/ofertas', icon: IconoOfertas, label: 'Ofertas', desc: 'Bundles y reglas' },
+  { to: '/admin/produccion', icon: IconoProduccion, label: 'Producción', desc: 'Plan del día' },
+  { to: '/admin/metricas', icon: IconoMetricas, label: 'Métricas', desc: 'Ventas y margen' },
+  { to: '/admin/config', icon: IconoConfig, label: 'Config', desc: 'Negocio y precios' },
 ];
 
 export default function AdminPanel() {
@@ -135,7 +139,10 @@ export default function AdminPanel() {
         <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {ACCESOS.map((a) => (
             <Link key={a.to} to={a.to} className="vt-ficha btn-tap rounded-xl px-3 py-2.5 hover:bg-[#8b4513]/10">
-              <p className="text-base">{a.icon} <span className="vt-serif text-xs font-extrabold uppercase">{a.label}</span></p>
+              <p className="flex items-center gap-1.5">
+                <a.icon size={16} className="flex-shrink-0 text-[#8b4513]" />
+                <span className="vt-serif text-xs font-extrabold uppercase">{a.label}</span>
+              </p>
               <p className="text-[10px] italic opacity-55">{a.desc}</p>
             </Link>
           ))}

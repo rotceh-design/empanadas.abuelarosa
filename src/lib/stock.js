@@ -1,5 +1,5 @@
 // Lógica pura de inventario: rendimiento en empanadas, alertas y consumo por pedido.
-// Sin dependencias de Firebase ni DOM — apta para tests con vite-node.
+// Sin dependencias de backend ni DOM — apta para tests con vite-node.
 
 export const UMBRAL_DEFECTO = 10;
 

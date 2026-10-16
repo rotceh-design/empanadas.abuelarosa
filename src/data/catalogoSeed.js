@@ -1,7 +1,7 @@
 // ============================================
 // CATÁLOGO SEMILLA — Empanadas Abuela Rosa
 // Precios en CLP. Es la copia local de respaldo;
-// en producción se lee TODO desde Firestore.
+// en producción se lee TODO desde Supabase.
 // ============================================
 
 export const CATALOGO_SEED = [

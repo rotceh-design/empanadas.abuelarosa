@@ -1,124 +1,122 @@
-# 🗄️ Esquema de Firestore y reglas de seguridad
+# 🗄️ Esquema de Supabase y permisos (RLS)
 
-Todo el catálogo, precios, ofertas y reglas viven en Firestore para que se editen desde el panel admin sin tocar código.
+Todo el catálogo, precios, ofertas y reglas viven en Supabase para que se editen desde el panel admin sin tocar código.
+
+El esquema completo está en [`supabase/schema.sql`](./supabase/schema.sql). Pégalo en el **SQL Editor** de Supabase y presiona **Run** (es idempotente).
 
 ---
 
-## Colecciones
+## Tablas
+
+Las columnas se guardan en `snake_case`; el frontend las mapea a `camelCase` en `src/lib/supabase.js`.
 
 ### `ingredients`
-Un documento por ingrediente (proteína, queso o acompañamiento).
+Un registro por ingrediente (proteína, queso o acompañamiento).
 
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `categoria` | string | `proteina` \| `queso` \| `acompanamiento` |
-| `linea` | string | `salada` \| `dulce` |
-| `nombre` | string | Nombre visible |
-| `emoji` | string | Representación visual |
-| `color` | string | Hex para el acento |
-| `orden` | number | Posición en la UI |
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `categoria` | text | `proteina` \| `queso` \| `acompanamiento` |
+| `linea` | text | `salada` \| `dulce` |
+| `nombre` | text | Nombre visible |
+| `emoji` | text | Representación visual |
+| `color` | text | Hex para el acento |
+| `orden` | int | Posición en la UI |
 | `disponible` | boolean | `false` = agotado (se oculta del armador) |
-| `tags` | array | `vegana`, `vegano`, `vegetal`, `pescado`, `marisco`, `picante` |
-| `porcionGramos` | number | Gramos por porción (costos y producción) |
-| `costoKg` | number | Precio por kilo (margen) |
-| `precio` | number | Aporte del ingrediente al precio de la empanada (CLP) |
-| `stockGramos` | number | Opcional. Stock actual en gramos (Inventario). Sin cargar = no rastreado. Se descuenta al confirmar el pago del pedido. |
+| `tags` | text[] | `vegana`, `vegano`, `vegetal`, `pescado`, `marisco`, `picante` |
+| `porcion_gramos` | int | Gramos por porción (costos y producción) |
+| `costo_kg` | numeric | Precio por kilo (margen) |
+| `precio` | numeric | Aporte del ingrediente al precio de la empanada (CLP) |
+| `stock_gramos` | int | Opcional. Stock actual en gramos. Sin cargar = no rastreado. Se descuenta al confirmar el pago. |
 
 **Precio de la empanada:** suma de los aportes de sus ingredientes, recortada al rango de su línea — salada `precios.precioMinEmpanada` (3490) – `precioMaxEmpanada` (3990); dulce `lineas.dulce.precioMinEmpanada` (2790) – `precioMaxEmpanada` (3390). Nunca sale de ese rango.
 
-**Línea dulce:** 1 relleno (`categoria: proteina`, `linea: dulce`) + 1 queso (los mismos de la salada: `q_gouda`, `q_llanero`, `q_vegano`, `q_mozzarella`) + hasta 1 extra opcional (`categoria: acompañamiento`, `linea: dulce`). El armador usa pasos dinámicos (`?linea=dulce` llega desde el Home). Quesos no tienen `linea: dulce` — `CatalogContext` inyecta los de salada en la línea dulce.
+**Línea dulce:** 1 relleno (`categoria: proteina`, `linea: dulce`) + 1 queso (los mismos de la salada) + hasta 1 extra opcional. Los quesos no tienen `linea: dulce` — `CatalogContext` inyecta los de salada en la línea dulce.
 
-**IDs fijos del seed:** salada — `p_carne`, `p_pollo`, `p_camaron`, `p_reineta`, `p_salmon`, `p_seitan` · `q_gouda`, `q_llanero`, `q_vegano`, `q_mozzarella` · `a_tomate`, `a_choclo`, `a_champinon`, `a_palmitos`, `a_pimenton`, `a_aceituna`, `a_albahaca`, `a_acelga`, `a_espinaca`, `a_cebolla`, `a_zapallo`. dulce — rellenos `d_nutella`, `d_chocolate`, `d_manjar`, `d_membrillo`; extras `d_choclo`, `d_pina`, `d_mango`, `d_frutos`, `d_frutossecos`, `d_coco`, `d_almendra`, `d_nuez`, `d_mani`, `d_mermelada`, `d_chancaca`. Combinaciones: 4×4×(1+11) = 192 (con extra: 4×4×11 = 176).
+**IDs fijos del seed:** salada — `p_carne`, `p_pollo`, `p_camaron`, `p_reineta`, `p_salmon`, `p_seitan` · `q_gouda`, `q_llanero`, `q_vegano`, `q_mozzarella` · `a_tomate`, `a_choclo`, `a_champinon`, `a_palmitos`, `a_pimenton`, `a_aceituna`, `a_albahaca`, `a_acelga`, `a_espinaca`, `a_cebolla`, `a_zapallo`. dulce — rellenos `d_nutella`, `d_chocolate`, `d_manjar`, `d_membrillo`; extras `d_choclo`, `d_pina`, `d_mango`, `d_frutos`, `d_frutossecos`, `d_coco`, `d_almendra`, `d_nuez`, `d_mani`, `d_mermelada`, `d_chancaca`.
 
 ### `drinks`
-Bebidas en lata. Campos: `nombre`, `emoji`, `color`, `orden`, `disponible`, `precio`, `costo`, `azucar` (`normal` \| `azucarada` \| `sin_azucar`), `stockUnidades` (opcional, unidades en stock).
+Bebidas en lata. Campos: `nombre`, `emoji`, `color`, `orden`, `disponible`, `precio`, `costo`, `azucar` (`normal` \| `azucarada` \| `sin_azucar`), `stock_unidades` (opcional).
 
 ### `offers`
-Ofertas que el carrito combina automáticamente.
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `nombre` | string | Nombre de la oferta |
-| `empanadas` | number | Cuántas empanadas incluye |
-| `bebidas` | number | Cuántas bebidas incluye |
-| `precio` | number | Precio del bundle (CLP) |
-| `activa` | boolean | Se puede desactivar sin borrar |
-| `orden` | number | Prioridad |
-| `destacado` | string | Opcional: `individual` o `familiar` — el banner promociona estos combos (CTA al armador) |
+Ofertas que el carrito combina automáticamente: `nombre`, `empanadas`, `bebidas`, `precio`, `activa`, `orden`, `emoji`, `destacado` (`individual` \| `familiar`).
 
 ### `rules`
-Sugerencias de compatibilidad editables.
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `baseTipo` | string | `proteina` \| `queso` |
-| `baseId` | string | ID del ingrediente base |
-| `acompanamientos` | array | IDs sugeridos |
-| `mensaje` | string | Texto que ve el cliente |
+Sugerencias de compatibilidad editables: `base_tipo` (`proteina` \| `queso`), `base_id`, `acompanamientos` (text[]), `mensaje`.
 
 ### `badges`
-Insignias de gamificación. Campos: `nombre`, `descripcion`, `icono`, `condicion` (`{tipo, valor}`), `cupon`.
+Insignias de gamificación: `nombre`, `descripcion`, `icono`, `condicion` (jsonb `{tipo, valor}`), `cupon`.
 
-### `settings/main`
-Documento único de configuración:
+### `settings`
+Un solo registro (`id = 'main'`). La configuración vive en la columna `data` (jsonb) con esta forma:
 
 - `negocio` → nombre, ubicación, WhatsApp, Instagram
-- `lineas` → `{ salada: {activa}, dulce: {activa, cantidadAcompanamientos: 1, extrasOpcional, precioMinEmpanada: 2790, precioMaxEmpanada: 3390} }`
-- `precios` → `precioMinEmpanada` (3490), `precioMaxEmpanada` (3990), `empanadaBase` (2990, referencia de ofertas), extras (`proteinaExtra`, `quesoExtra`, `acompanamientoExtra`), `maxExtrasPorEmpanada`
+- `lineas` → `{ salada: {activa}, dulce: {activa, cantidadAcompanamientos, extrasOpcional, precioMinEmpanada, precioMaxEmpanada} }`
+- `precios` → `precioMinEmpanada`, `precioMaxEmpanada`, `empanadaBase` (referencia de ofertas), extras, `maxExtrasPorEmpanada`
 - `delivery` → `gratisDesdeEmpanadas`, `costo`, `comunasGratis`
-- `produccion` → `diasHabilitados` (viernes/sábado/domingo), `horas`
-- `pago` → `onlineActivo` (próximamente), mensaje
+- `produccion` → `diasHabilitados`, `horas`
+- `pago` → `onlineActivo`, mensaje
 - `gamificacion` → activa, puntos, cupón
-- `combinacionDia` → `{ activo, precio (default 2990), forzada: {proteinaId, quesoId, acompanamientosIds} | null }`. Genera **3 empanadas del día** deterministas por fecha (una terrestre, una del mar y una vegana; misma para todos, cambian a las 00:00) a precio fijo. El banner las promociona y el Home muestra las 3 tarjetas; `forzada` fija la primera.
+- `combinacionDia` → `{ activo, precio, forzada: {proteinaId, quesoId, acompanamientosIds} | null }`. Genera **3 empanadas del día** deterministas por fecha a precio fijo.
 - `ia` → activa
 - `masa` → `{ nombre, porcionGramos, costoKg }`
-- `inventario` → `{ umbralEmpanadas (default 10, alerta "por renovar"), masaGramos (stock de masa en gramos, opcional) }`
+- `inventario` → `{ umbralEmpanadas, masaGramos }`
 
-### `stats/{clave}`
-Ranking en vivo de combinaciones pedidas. `clave` = `proteina+queso+acomp1+acomp2+acomp3+acomp4` (IDs ordenados y unidos por `+`). Campos: `count`, `nombre`, `emojis`, `proteinaId`, `quesoId`, `acompanamientosIds`.
+### `stats`
+Ranking en vivo de combinaciones pedidas. La columna `id` es la clave de combinación (`proteina+queso+acomp…`, IDs ordenados y unidos por `+`). Campos: `count`, `nombre`, `emojis`, `proteina_id`, `queso_id`, `acompanamientos_ids`.
 
 ### `orders`
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `numero` | number | Número de ticket (desde `counters/orders`) |
-| `status` | string | `pendiente_pago` → `pago_confirmado` → `en_preparacion` → `en_reparto` → `entregado` |
-| `items` | array | Empanadas y bebidas con detalle |
-| `cliente` | map | nombre, teléfono, dirección, comuna, referencias |
-| `entrega` | map | `{fecha, hora}` |
-| `totales` | map | subtotal, ahorro, delivery, total |
-| `oferta` | map | ahorro y detalle de ofertas aplicadas |
-| `etiquetas` | array | vegana, marisco, etc. |
-| `comprobante` | string | Opcional. DataURL (webp/jpg comprimido) del comprobante de pago subido en Checkout. El admin lo ve en Pedidos. |
-| `stockDescontado` | boolean | Opcional. `true` si el stock del pedido ya se descontó al confirmar el pago (permite reversa si vuelve a `pendiente_pago`). |
-| `createdAt` | string | ISO 8601 |
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `numero` | int | Número de ticket (vía la RPC `next_order_number`) |
+| `status` | text | `pendiente_pago` → `pago_confirmado` → `en_preparacion` → `en_reparto` → `entregado` |
+| `items` | jsonb | Empanadas y bebidas con detalle |
+| `cliente` | jsonb | nombre, teléfono, dirección, comuna, referencias |
+| `entrega` | jsonb | `{fecha, hora}` |
+| `totales` | jsonb | subtotal, ahorro, delivery, total |
+| `oferta` | jsonb | ahorro y detalle de ofertas aplicadas |
+| `etiquetas` | text[] | vegana, marisco, etc. |
+| `comprobante` | text | Opcional. DataURL del comprobante de pago. |
+| `stock_descontado` | boolean | `true` si el stock ya se descontó al confirmar el pago. |
+| `created_at` / `updated_at` | timestamptz | Automáticos |
 
 ### `inventory_log`
-Historial de movimientos de inventario (solo admin). Campos: `tipo` (`compra` \| `conteo`), `naturaleza` (`ingrediente` \| `bebida` \| `masa`), `id`, `nombre`, `gramos`/unidades, `costo` (compra, CLP), `nota`, y en conteos: `esperado`, `real`, `merma`, `mermaCLP`, `costoKg`, `fecha` (ISO).
+Historial de movimientos de inventario (solo admin). Cada fila tiene `entrada` (jsonb con `tipo`, `naturaleza`, `id`, `nombre`, gramos/unidades, `costo`, `nota`, y en conteos `esperado`/`real`/`merma`/`mermaCLP`/`costoKg`) y `fecha`.
 
-### `customers/{telefono}`
-Perfil de gamificación: `puntos`, `pedidos`, `favoritas`, `combinaciones` probadas.
+### `customers`
+Perfil de gamificación por teléfono (`id` = teléfono normalizado): `nombre`, `telefono`, `comuna`, `pedidos`, `puntos`, `ultima_combinacion`, `ultima_fecha`.
 
 ### `counters`
 `orders.valor` (número de ticket) y `combinaciones.valor` (total de combinaciones únicas pedidas).
 
+### `profiles`
+Rol de admin por usuario de Auth: `id` (referencia a `auth.users`), `email`, `is_admin`.
+
 ---
 
-## 🔐 Reglas de seguridad (`firestore.rules`)
+## 🔐 Permisos (Row Level Security)
+
+Definidos en `supabase/schema.sql` con la función `es_admin()` (perfil marcado **o** correo `admin@abuelarosa.cl`):
 
 - **Catálogo** (`ingredients`, `drinks`, `offers`, `rules`, `badges`, `settings`): lectura pública, escritura solo admin.
-- **counters**: lectura pública, escritura solo admin.
-- **stats**: lectura pública; creación/incremento limitado a +25 por escritura (evita abuso del ranking).
-- **orders**: cualquiera puede crear un pedido válido (`status` debe ser `pendiente_pago` y `total > 0`); lectura y edición solo admin.
-- **customers**: solo admin.
-- **inventory_log** (compras/conteos de inventario): solo admin.
+- **counters**: lectura pública, escritura solo admin (las RPCs son `SECURITY DEFINER`).
+- **stats**: lectura pública; escritura acotada (evita abuso del ranking).
+- **orders**: cualquiera puede crear un pedido válido (`cliente` con nombre y teléfono, `items` como array, `total > 0` y `status = pendiente_pago`); lectura y edición solo admin.
+- **customers**, **inventory_log**: solo admin.
+- **profiles**: cada uno ve el suyo; admin ve todos.
 
-El rol de admin se resuelve con el custom claim `admin == true` (recomendado) o el email `admin@abuelarosa.cl`.
+Para marcar a un usuario como admin:
 
-```bash
-# Asignar el claim de admin (ejecutar una sola vez desde el servidor)
-firebase functions:shell
-> const {getAuth} = require('firebase-admin/auth');
-> getAuth().setCustomUserClaims('UID_DEL_ADMIN', {admin: true}).then(()=>console.log('ok'))
+```sql
+update public.profiles set is_admin = true where email = 'admin@abuelarosa.cl';
 ```
 
-El archivo completo está en [`firestore.rules`](./firestore.rules). Los índices compuestos en [`firestore.indexes.json`](./firestore.indexes.json).
+---
+
+## ⚙️ RPCs
+
+Funciones `SECURITY DEFINER` que garantizan operaciones atómicas desde el cliente:
+
+- `next_order_number()` → devuelve el siguiente número de pedido de forma atómica.
+- `register_order_stats(...)` → sube el ranking de una combinación y el contador total.
+- `upsert_customer(...)` → crea/actualiza un cliente (puntos y contador de pedidos).
+- `apply_stock(payload jsonb)` → descuento/devolución de stock en lote (`{ings, bebs, masa_gramos}`).

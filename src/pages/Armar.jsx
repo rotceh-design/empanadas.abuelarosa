@@ -6,7 +6,7 @@ import { useCart } from '../contexts/CartContext';
 import { usePlayer } from '../contexts/PlayerContext';
 import Ruleta from '../components/builder/Ruleta';
 import { Etiqueta } from '../components/ui';
-import { IconoIngrediente, IconoCarne, IconoQuesoWedge, IconoLata } from '../components/Iconos';
+import { IconoIngrediente, IconoCarne, IconoQuesoWedge, IconoLata, IconoCandado } from '../components/Iconos';
 import { fmtCLP } from '../lib/formato';
 import { desgloseEmpanada, aporteIngrediente } from '../lib/precios';
 import FichaEmpanada from '../components/FichaEmpanada';
@@ -39,16 +39,17 @@ const PASOS_DULCE = ['relleno', 'queso', 'extra', 'resumen'];
 export default function Armar() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { lineas, precios, settings, whatsapp, bebidas: catalogoBebidas } = useCatalog();
+  const { lineas, lineasTodas, precios, settings, whatsapp, bebidas: catalogoBebidas } = useCatalog();
   const { agregarEmpanada, agregarBebida, empanadas, bebidas, resumen, vaciar } = useCart();
   const { registrarEmpanada, registrarPedido } = usePlayer();
 
   const [lineaId, setLineaId] = useState(() => {
     const q = searchParams.get('linea');
-    if (q && lineas.some((l) => l.id === q)) return q;
+    if (q && lineasTodas.some((l) => l.id === q)) return q;
     return lineas[0]?.id || 'salada';
   });
-  const linea = lineas.find((l) => l.id === lineaId) || lineas[0];
+  const linea = lineasTodas.find((l) => l.id === lineaId) || lineasTodas[0];
+  const lineaActiva = linea?.activa !== false;
   const esDulce = lineaId === 'dulce';
   const cantAcomp = linea?.cantidadAcompanamientos ?? (esDulce ? 1 : 4);
   const pasos = esDulce ? PASOS_DULCE : PASOS_SALADA;
@@ -76,8 +77,8 @@ export default function Armar() {
 
   const nombreAuto = useMemo(() => {
     if (!proteina || !queso) return '';
-    return generarNombre({ proteina, queso, acompanamientos: acamps, vegana: etiquetasInfo.esVegana });
-  }, [proteina, queso, acamps, etiquetasInfo.esVegana]);
+    return generarNombre({ proteina, queso });
+  }, [proteina, queso]);
 
   const nombreFinal = nombreAuto;
 
@@ -254,9 +255,9 @@ export default function Armar() {
   return (
     <div className="vt-papel vt-tinta mx-auto min-h-screen max-w-3xl px-4 pb-32 pt-4">
       {/* Pestañas de línea */}
-      {lineas.length > 1 && (
+      {lineasTodas.length > 1 && (
         <div className="mb-3 flex gap-2">
-          {lineas.map((l) => (
+          {lineasTodas.map((l) => (
             <button
               key={l.id}
               onClick={() => cambiarLinea(l.id)}
@@ -264,15 +265,35 @@ export default function Armar() {
                 lineaId === l.id
                   ? 'vt-pestana-activa'
                   : 'vt-botones bg-transparent'
-              }`}
+              } ${l.activa ? '' : 'opacity-60'}`}
             >
-              {l.nombre}
+              {l.nombre}{l.activa ? '' : ' · Próximamente'}
             </button>
           ))}
         </div>
       )}
 
+      {/* Línea apagada en config: bloqueada, sin builder */}
+      {!lineaActiva && (
+        <div className="vt-sello mt-6 flex flex-col items-center gap-3 rounded-3xl p-8 text-center">
+          <IconoCandado size={44} />
+          <h2 className="vt-titulo text-2xl">Línea {linea.nombre} — Próximamente</h2>
+          <p className="vt-cuerpo mx-auto max-w-sm text-sm italic opacity-75">
+            Esta línea está pausada por ahora. Estamos preparándola para ti; vuelve pronto.
+          </p>
+          {lineas.length > 0 && (
+            <button
+              onClick={() => cambiarLinea(lineas[0].id)}
+              className="vt-btn btn-tap mt-2 rounded-full px-6 py-3 text-sm"
+            >
+              Ir a la línea {lineas[0].nombre} →
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Ficha de ingredientes (HUD) */}
+      {lineaActiva && (<>
       <div className="sticky top-[104px] z-30 -mx-4 bg-[#f3e6c8]/92 px-4 py-2 backdrop-blur">
         <div className="flex items-center gap-3">
           <div className="flex-shrink-0">
@@ -496,6 +517,7 @@ export default function Armar() {
               desglose={desglose}
               esDulce={esDulce}
               etiquetas={etiquetasInfo.etiquetas}
+              bebidas={bebidas}
               onCarrito={alCarrito}
               onPagar={pagar}
             />
@@ -522,6 +544,7 @@ export default function Armar() {
           </div>
         </div>
       )}
+      </>)}
 
       {ruletaAbierta && (
         <Ruleta
@@ -640,8 +663,10 @@ function ExtraCard({ icono, titulo, precio, activo, lleno, onClick }) {
   );
 }
 
-function Resumen({ nombre, desglose, esDulce, etiquetas, onCarrito, onPagar }) {
+function Resumen({ nombre, desglose, esDulce, etiquetas, bebidas = [], onCarrito, onPagar }) {
   const precio = desglose.total;
+  const totalBebidas = bebidas.reduce((s, b) => s + (b.precio || 0) * (b.cantidad || 1), 0);
+  const totalPedido = precio + totalBebidas;
 
   return (
     <div>
@@ -660,12 +685,41 @@ function Resumen({ nombre, desglose, esDulce, etiquetas, onCarrito, onPagar }) {
         <FichaEmpanada nombre={nombre} desglose={desglose} esDulce={esDulce} />
       </div>
 
+      {/* Bebidas del pedido */}
+      {bebidas.length > 0 && (
+        <div className="mt-3 overflow-hidden rounded-2xl border-2 border-[#4a2c17]/30 bg-[#fffaf0]/85">
+          <p className="vt-serif border-b-2 border-[#4a2c17]/15 bg-[#4a2c17]/6 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.2em] opacity-50">
+            Bebidas del pedido
+          </p>
+          <div className="space-y-1.5 px-4 py-3">
+            {bebidas.map((b) => (
+              <div key={b.cartId || b.id} className="flex items-baseline gap-2">
+                <span className="vt-cuerpo min-w-0 flex-1 truncate text-sm">
+                  {b.emoji} {b.nombre}{b.cantidad > 1 ? ` ×${b.cantidad}` : ''}
+                </span>
+                <span className="vt-serif shrink-0 text-sm font-bold tabular-nums">
+                  {fmtCLP((b.precio || 0) * (b.cantidad || 1))}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Total del pedido (empanada + bebidas) */}
+      {totalBebidas > 0 && (
+        <div className="mt-3 flex items-baseline justify-between rounded-2xl border-2 border-[#4a2c17]/30 bg-[#fffaf0]/85 px-4 py-3">
+          <span className="vt-serif text-xs font-extrabold uppercase tracking-wide">Total pedido</span>
+          <span className="vt-titulo text-2xl">{fmtCLP(totalPedido)}</span>
+        </div>
+      )}
+
       <div className="mt-4 space-y-2.5">
         <button
           onClick={onPagar}
           className="vt-btn btn-tap w-full rounded-full px-6 py-4 text-base"
         >
-          Pagar — {fmtCLP(precio)}
+          Pagar — {fmtCLP(totalPedido)}
         </button>
         <button
           onClick={onCarrito}

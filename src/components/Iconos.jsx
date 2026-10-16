@@ -556,6 +556,16 @@ export function IconoEmpanada({ size = 22, className = '' }) {
   );
 }
 
+export function IconoCandado({ size = 22, className, color = '#8b4513' }) {
+  return (
+    <S size={size} className={className}>
+      <path d="M7.5 10.5V7.8a4.5 4.5 0 0 1 9 0v2.7" fill="none" stroke={color} strokeWidth="1.9" strokeLinecap="round" />
+      <rect x="5" y="10.5" width="14" height="9.5" rx="2.4" fill="none" stroke={color} strokeWidth="1.9" />
+      <circle cx="12" cy="15.2" r="1.4" fill={color} />
+    </S>
+  );
+}
+
 export function IconoDulce({ size = 22, className, color = '#B8742C' }) {
   return (
     <S size={size} className={className}>

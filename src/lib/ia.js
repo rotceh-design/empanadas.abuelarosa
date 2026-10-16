@@ -1,17 +1,6 @@
-import { httpsCallable } from 'firebase/functions';
-import { functions, isFirebaseConfigured } from './firebase';
-
-// Recomendación IA con fallback local si falla o no hay Firebase.
+// Recomendador de combinaciones. Por ahora es 100% local (determinista);
+// la IA real se conecta más adelante vía Edge Function de Supabase.
 export async function recomendar({ vegetariana, favorito, picante }) {
-  if (isFirebaseConfigured) {
-    try {
-      const fn = httpsCallable(functions, 'recomendar');
-      const res = await fn({ vegetariana, favorito, picante });
-      if (res.data?.opciones?.length) return res.data;
-    } catch (e) {
-      console.warn('IA no disponible:', e?.message);
-    }
-  }
   return { fuente: 'local', opciones: fallbackLocal({ vegetariana, favorito, picante }) };
 }
 

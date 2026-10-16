@@ -15,10 +15,9 @@ import { enviarPedidoWhatsApp } from '../lib/ticket';
 
 export default function Bienvenida() {
   const navigate = useNavigate();
-  const { settings, lineas, porId, whatsapp, bebidas: bebidasCatalogo } = useCatalog();
+  const { settings, lineas, lineasTodas, porId, whatsapp, bebidas: bebidasCatalogo } = useCatalog();
   const { agregarEmpanada, agregarBebida, empanadas, bebidas, resumen, vaciar } = useCart();
   const { registrarEmpanada, registrarPedido } = usePlayer();
-  const dulceActiva = settings?.lineas?.dulce?.activa !== false;
 
   const delDia = useMemo(
     () => combinacionesDelDia({ lineas, settings, porId }),
@@ -148,35 +147,23 @@ export default function Bienvenida() {
         </p>
 
         <div className="mt-6 flex w-full flex-col items-center justify-center gap-8 sm:flex-row sm:items-stretch sm:gap-12">
-          <motion.div
-            initial={{ opacity: 0, x: -24 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.35, duration: 0.45 }}
-            className="flex w-full max-w-[15.5rem] justify-center sm:max-w-none sm:flex-1"
-          >
-            <SelloLinea
-              icono={<IconoEmpanada size={56} color="#b5763a" />}
-              titulo="EMPANADAS SALADAS"
-              subtitulo="Carne, pollo, camarón y más"
-              onClick={() => elegirLinea('salada')}
-            />
-          </motion.div>
-
-          {dulceActiva && (
+          {lineasTodas.map((l, i) => (
             <motion.div
-              initial={{ opacity: 0, x: 24 }}
+              key={l.id}
+              initial={{ opacity: 0, x: i === 0 ? -24 : 24 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.45, duration: 0.45 }}
+              transition={{ delay: 0.35 + i * 0.1, duration: 0.45 }}
               className="flex w-full max-w-[15.5rem] justify-center sm:max-w-none sm:flex-1"
             >
               <SelloLinea
                 icono={<IconoEmpanada size={56} color="#b5763a" />}
-                titulo="EMPANADAS DULCES"
-                subtitulo="Nutella, chocolate, manjar"
-                onClick={() => elegirLinea('dulce')}
+                titulo={l.id === 'dulce' ? 'EMPANADAS DULCES' : 'EMPANADAS SALADAS'}
+                subtitulo={l.id === 'dulce' ? 'Nutella, chocolate, manjar y más' : 'Carne, pollo, camarón y más'}
+                onClick={() => elegirLinea(l.id)}
+                bloqueada={!l.activa}
               />
             </motion.div>
-          )}
+          ))}
         </div>
 
         {/* Empanadas del día — 3 opciones con oferta */}
