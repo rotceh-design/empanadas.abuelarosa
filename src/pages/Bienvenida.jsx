@@ -15,7 +15,7 @@ import { enviarPedidoWhatsApp } from '../lib/ticket';
 
 export default function Bienvenida() {
   const navigate = useNavigate();
-  const { settings, lineas, lineasTodas, porId, whatsapp, bebidas: bebidasCatalogo } = useCatalog();
+  const { settings, lineas, lineasTodas, porId, bebidas: bebidasCatalogo } = useCatalog();
   const { agregarEmpanada, agregarBebida, empanadas, bebidas, resumen, vaciar } = useCart();
   const { registrarEmpanada, registrarPedido } = usePlayer();
 
@@ -92,7 +92,7 @@ export default function Bienvenida() {
       const creado = await crearPedido(pedido);
       const completo = { ...pedido, numero: creado.numero, id: creado.id };
       registrarPedido(pedido);
-      const r = await enviarPedidoWhatsApp({ pedido: completo, numero: whatsapp });
+      const r = await enviarPedidoWhatsApp({ pedido: completo });
       vaciar();
       navigate('/ticket', { state: { pedido: completo, envio: r }, replace: true });
     } finally {

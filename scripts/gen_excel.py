@@ -86,7 +86,7 @@ SUP_EXT_FIN = SUP_EXT_INI + N_EXT - 1
 SUP_MIN = SUP_EXT_FIN + 3
 SUP_MAX = SUP_MIN + 1
 
-sup.cell(row=SUP_TITULO, column=1, value='LÍNEA DULCE — 1 relleno + 1 queso (los de la salada) + hasta 1 extra opcional (rango de precio propio)')
+sup.cell(row=SUP_TITULO, column=1, value='LÍNEA DULCE — 1 relleno + 1 queso (los de la salada) + hasta 4 extras opcionales (rango de precio propio)')
 copy_style(sup.cell(row=SUP_TITULO, column=1), sup.cell(row=7, column=1))
 
 def escribir_bloque(titulo_hdr_row, nombre_col, items):
@@ -179,7 +179,7 @@ else:
     guia.cell(row=14, column=2, value='Combinaciones Dulce')
     guia.cell(row=14, column=3, value=f'Las {N_OPC} opciones de la línea dulce ({N_REL} rellenos × {N_QUE} quesos × extras) con costo, precio (tope $3.390) y margen')
 if not any('línea dulce' in str(guia.cell(row=r, column=1).value or '') for r in range(1, guia.max_row + 1)):
-    guia.cell(row=guia.max_row + 2, column=1, value='• La línea dulce (1 relleno + 1 queso dulce + hasta 1 extra) tiene rango propio: mínimo $2.790 y tope $3.390 — ver hoja Combinaciones Dulce.')
+    guia.cell(row=guia.max_row + 2, column=1, value='• La línea dulce (1 relleno + 1 queso dulce + hasta 4 extras) tiene rango propio: mínimo $2.790 y tope $3.390 — ver hoja Combinaciones Dulce.')
     copy_style(guia.cell(row=guia.max_row, column=1), guia.cell(row=24, column=1))
 print('Guía: índice actualizado + regla dulce')
 

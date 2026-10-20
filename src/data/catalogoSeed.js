@@ -13,20 +13,20 @@ export const CATALOGO_SEED = [
   { id: 'p_salmon', categoria: 'proteina', linea: 'salada', nombre: 'Salmón', emoji: '🐠', color: '#F2836B', orden: 5, disponible: true, tags: ['pescado'], porcionGramos: 70, costoKg: 12900, precio: 1400 },
   { id: 'p_seitan', categoria: 'proteina', linea: 'salada', nombre: 'Seitan', emoji: '🌾', color: '#B98B5E', orden: 6, disponible: true, tags: ['vegana', 'vegetal'], porcionGramos: 70, costoKg: 5000, precio: 1150 },
 
-  { id: 'q_gouda', categoria: 'queso', linea: 'salada', nombre: 'Gouda', emoji: '🧀', color: '#F0B429', orden: 1, disponible: true, tags: [], porcionGramos: 25, costoKg: 6250, precio: 990 },
-  { id: 'q_llanero', categoria: 'queso', linea: 'salada', nombre: 'Llanero', emoji: '🧀', color: '#E58A22', orden: 2, disponible: true, tags: [], porcionGramos: 25, costoKg: 12000, precio: 930 },
-  { id: 'q_vegano', categoria: 'queso', linea: 'salada', nombre: 'Vegano', emoji: '🌱', color: '#6FBF73', orden: 3, disponible: true, tags: ['vegano'], porcionGramos: 25, costoKg: 12500, precio: 890 },
-  { id: 'q_mozzarella', categoria: 'queso', linea: 'salada', nombre: 'Mozzarella', emoji: '🧀', color: '#F6E27A', orden: 4, disponible: true, tags: [], porcionGramos: 25, costoKg: 7800, precio: 960 },
+  { id: 'q_gouda', categoria: 'queso', linea: 'salada', nombre: 'Gouda', emoji: '🧀', color: '#F0B429', orden: 1, disponible: true, tags: [], porcionGramos: 50, costoKg: 6250, precio: 990 },
+  { id: 'q_llanero', categoria: 'queso', linea: 'salada', nombre: 'Llanero', emoji: '🧀', color: '#E58A22', orden: 2, disponible: true, tags: [], porcionGramos: 50, costoKg: 12000, precio: 930 },
+  { id: 'q_vegano', categoria: 'queso', linea: 'salada', nombre: 'Vegano', emoji: '🌱', color: '#6FBF73', orden: 3, disponible: true, tags: ['vegano'], porcionGramos: 50, costoKg: 12500, precio: 890 },
+  { id: 'q_mozzarella', categoria: 'queso', linea: 'salada', nombre: 'Mozzarella', emoji: '🧀', color: '#F6E27A', orden: 4, disponible: true, tags: [], porcionGramos: 50, costoKg: 7800, precio: 960 },
 
   { id: 'a_tomate', categoria: 'acompanamiento', linea: 'salada', nombre: 'Tomate', emoji: '🍅', color: '#DC4B3E', orden: 1, disponible: true, tags: ['vegetal'], porcionGramos: 20, costoKg: 2000, precio: 375 },
   { id: 'a_choclo', categoria: 'acompanamiento', linea: 'salada', nombre: 'Choclo', emoji: '🌽', color: '#F5C518', orden: 2, disponible: true, tags: ['vegetal'], porcionGramos: 20, costoKg: 2500, precio: 375 },
   { id: 'a_champinon', categoria: 'acompanamiento', linea: 'salada', nombre: 'Champiñón', emoji: '🍄', color: '#A78B6F', orden: 3, disponible: true, tags: ['vegetal'], porcionGramos: 20, costoKg: 1670, precio: 375 },
   { id: 'a_palmitos', categoria: 'acompanamiento', linea: 'salada', nombre: 'Palmitos', emoji: '🌿', color: '#DCCBA4', orden: 4, disponible: true, tags: ['vegetal'], porcionGramos: 20, costoKg: 5630, precio: 400 },
   { id: 'a_pimenton', categoria: 'acompanamiento', linea: 'salada', nombre: 'Pimentón', emoji: '🫑', color: '#C96A20', orden: 5, disponible: true, tags: ['vegetal', 'picante'], porcionGramos: 20, costoKg: 3330, precio: 385 },
-  { id: 'a_aceituna', categoria: 'acompanamiento', linea: 'salada', nombre: 'Aceituna', emoji: '🫒', color: '#5B6B4A', orden: 6, disponible: true, tags: ['vegetal'], porcionGramos: 15, costoKg: 3890, precio: 400 },
-  { id: 'a_albahaca', categoria: 'acompanamiento', linea: 'salada', nombre: 'Albahaca', emoji: '🌱', color: '#3B7A3E', orden: 7, disponible: true, tags: ['vegetal'], porcionGramos: 10, costoKg: 6000, precio: 400 },
+  { id: 'a_aceituna', categoria: 'acompanamiento', linea: 'salada', nombre: 'Aceituna', emoji: '🫒', color: '#5B6B4A', orden: 6, disponible: true, tags: ['vegetal'], porcionGramos: 20, costoKg: 3890, precio: 400 },
+  { id: 'a_albahaca', categoria: 'acompanamiento', linea: 'salada', nombre: 'Albahaca', emoji: '🌱', color: '#3B7A3E', orden: 7, disponible: true, tags: ['vegetal'], porcionGramos: 20, costoKg: 6000, precio: 400 },
   { id: 'a_acelga', categoria: 'acompanamiento', linea: 'salada', nombre: 'Acelga', emoji: '🥬', color: '#2F6B33', orden: 8, disponible: true, tags: ['vegetal'], porcionGramos: 20, costoKg: 2500, precio: 375 },
-  { id: 'a_espinaca', categoria: 'acompanamiento', linea: 'salada', nombre: 'Espinaca', emoji: '🍃', color: '#4E8B3A', orden: 9, disponible: true, tags: ['vegetal'], porcionGramos: 15, costoKg: 4000, precio: 375 },
+  { id: 'a_espinaca', categoria: 'acompanamiento', linea: 'salada', nombre: 'Espinaca', emoji: '🍃', color: '#4E8B3A', orden: 9, disponible: true, tags: ['vegetal'], porcionGramos: 20, costoKg: 4000, precio: 375 },
   { id: 'a_cebolla', categoria: 'acompanamiento', linea: 'salada', nombre: 'Cebolla caramelizada', emoji: '🧅', color: '#B0742A', orden: 10, disponible: true, tags: ['vegetal'], porcionGramos: 20, costoKg: 7000, precio: 375 },
   { id: 'a_zapallo', categoria: 'acompanamiento', linea: 'salada', nombre: 'Zapallo italiano', emoji: '🥒', color: '#7FA650', orden: 11, disponible: true, tags: ['vegetal'], porcionGramos: 20, costoKg: 1800, precio: 375 },
 
@@ -38,17 +38,17 @@ export const CATALOGO_SEED = [
 
   // ---------- LÍNEA DULCE · Quesos: se usan los mismos de la línea salada ----------
 
-  // ---------- LÍNEA DULCE · Acompañamientos (hasta 1, opcional) ----------
-  { id: 'd_choclo', categoria: 'acompanamiento', linea: 'dulce', nombre: 'Choclo con queso', emoji: '🌽', color: '#F5C518', orden: 1, disponible: true, tags: ['vegetal'], porcionGramos: 30, costoKg: 3000, precio: 130 },
-  { id: 'd_pina', categoria: 'acompanamiento', linea: 'dulce', nombre: 'Piña', emoji: '🍍', color: '#E8C220', orden: 2, disponible: true, tags: ['vegetal'], porcionGramos: 30, costoKg: 2800, precio: 140 },
-  { id: 'd_mango', categoria: 'acompanamiento', linea: 'dulce', nombre: 'Mango', emoji: '🥭', color: '#F09030', orden: 3, disponible: true, tags: ['vegetal'], porcionGramos: 30, costoKg: 3500, precio: 150 },
-  { id: 'd_frutos', categoria: 'acompanamiento', linea: 'dulce', nombre: 'Frutos rojos', emoji: '🍓', color: '#C23B4E', orden: 4, disponible: true, tags: ['vegetal'], porcionGramos: 30, costoKg: 9500, precio: 160 },
+  // ---------- LÍNEA DULCE · Acompañamientos (hasta 4, opcional) ----------
+  { id: 'd_choclo', categoria: 'acompanamiento', linea: 'dulce', nombre: 'Choclo con queso', emoji: '🌽', color: '#F5C518', orden: 1, disponible: true, tags: ['vegetal'], porcionGramos: 20, costoKg: 3000, precio: 130 },
+  { id: 'd_pina', categoria: 'acompanamiento', linea: 'dulce', nombre: 'Piña', emoji: '🍍', color: '#E8C220', orden: 2, disponible: true, tags: ['vegetal'], porcionGramos: 20, costoKg: 2800, precio: 140 },
+  { id: 'd_mango', categoria: 'acompanamiento', linea: 'dulce', nombre: 'Mango', emoji: '🥭', color: '#F09030', orden: 3, disponible: true, tags: ['vegetal'], porcionGramos: 20, costoKg: 3500, precio: 150 },
+  { id: 'd_frutos', categoria: 'acompanamiento', linea: 'dulce', nombre: 'Frutos rojos', emoji: '🍓', color: '#C23B4E', orden: 4, disponible: true, tags: ['vegetal'], porcionGramos: 20, costoKg: 9500, precio: 160 },
   { id: 'd_frutossecos', categoria: 'acompanamiento', linea: 'dulce', nombre: 'Mix de frutos secos', emoji: '🥜', color: '#A67C52', orden: 5, disponible: true, tags: [], porcionGramos: 20, costoKg: 16000, precio: 180 },
-  { id: 'd_coco', categoria: 'acompanamiento', linea: 'dulce', nombre: 'Coco rallado', emoji: '🥥', color: '#F3EAD8', orden: 6, disponible: true, tags: ['vegetal'], porcionGramos: 12, costoKg: 6500, precio: 120 },
-  { id: 'd_almendra', categoria: 'acompanamiento', linea: 'dulce', nombre: 'Almendras', emoji: '🥜', color: '#C89B6A', orden: 7, disponible: true, tags: [], porcionGramos: 12, costoKg: 11000, precio: 170 },
-  { id: 'd_nuez', categoria: 'acompanamiento', linea: 'dulce', nombre: 'Nueces', emoji: '🌰', color: '#8B5E34', orden: 8, disponible: true, tags: [], porcionGramos: 12, costoKg: 14000, precio: 180 },
-  { id: 'd_mani', categoria: 'acompanamiento', linea: 'dulce', nombre: 'Maní', emoji: '🥜', color: '#C49A6C', orden: 9, disponible: true, tags: [], porcionGramos: 15, costoKg: 8000, precio: 130 },
-  { id: 'd_mermelada', categoria: 'acompanamiento', linea: 'dulce', nombre: 'Mermelada de mora', emoji: '🫐', color: '#5B4B8A', orden: 10, disponible: true, tags: ['vegetal'], porcionGramos: 25, costoKg: 6000, precio: 190 },
+  { id: 'd_coco', categoria: 'acompanamiento', linea: 'dulce', nombre: 'Coco rallado', emoji: '🥥', color: '#F3EAD8', orden: 6, disponible: true, tags: ['vegetal'], porcionGramos: 20, costoKg: 6500, precio: 120 },
+  { id: 'd_almendra', categoria: 'acompanamiento', linea: 'dulce', nombre: 'Almendras', emoji: '🥜', color: '#C89B6A', orden: 7, disponible: true, tags: [], porcionGramos: 20, costoKg: 11000, precio: 170 },
+  { id: 'd_nuez', categoria: 'acompanamiento', linea: 'dulce', nombre: 'Nueces', emoji: '🌰', color: '#8B5E34', orden: 8, disponible: true, tags: [], porcionGramos: 20, costoKg: 14000, precio: 180 },
+  { id: 'd_mani', categoria: 'acompanamiento', linea: 'dulce', nombre: 'Maní', emoji: '🥜', color: '#C49A6C', orden: 9, disponible: true, tags: [], porcionGramos: 20, costoKg: 8000, precio: 130 },
+  { id: 'd_mermelada', categoria: 'acompanamiento', linea: 'dulce', nombre: 'Mermelada de mora', emoji: '🫐', color: '#5B4B8A', orden: 10, disponible: true, tags: ['vegetal'], porcionGramos: 20, costoKg: 6000, precio: 190 },
   { id: 'd_chancaca', categoria: 'acompanamiento', linea: 'dulce', nombre: 'Chancaca', emoji: '🟤', color: '#8A5A2B', orden: 11, disponible: true, tags: [], porcionGramos: 20, costoKg: 3000, precio: 200 },
 ];
 
@@ -83,7 +83,7 @@ export const SETTINGS_SEED = {
   },
   lineas: {
     salada: { activa: true },
-    dulce: { activa: true, cantidadAcompanamientos: 1, extrasOpcional: true, precioMinEmpanada: 2790, precioMaxEmpanada: 3390 },
+    dulce: { activa: true, cantidadAcompanamientos: 4, extrasOpcional: true, precioMinEmpanada: 2790, precioMaxEmpanada: 3390 },
   },
   precios: {
     empanadaBase: 2990,

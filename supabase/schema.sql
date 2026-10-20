@@ -435,7 +435,7 @@ end $$;
 -- Settings base
 insert into public.settings (id, data) values ('main', '{
   "negocio": { "nombre": "Abuela Rosa", "ubicacion": "Maipú, Santiago", "whatsapp": "+56935438480", "instagram": "@abuelarosa.empanadas" },
-  "lineas": { "salada": { "activa": true }, "dulce": { "activa": true, "cantidadAcompanamientos": 1, "extrasOpcional": true, "precioMinEmpanada": 2790, "precioMaxEmpanada": 3390 } },
+  "lineas": { "salada": { "activa": true }, "dulce": { "activa": true, "cantidadAcompanamientos": 4, "extrasOpcional": true, "precioMinEmpanada": 2790, "precioMaxEmpanada": 3390 } },
   "precios": { "empanadaBase": 2990, "precioMinEmpanada": 3490, "precioMaxEmpanada": 3990, "proteinaExtra": 900, "quesoExtra": 700, "acompanamientoExtra": 400, "maxExtrasPorEmpanada": 2 },
   "delivery": { "gratisDesdeEmpanadas": 2, "costo": 1000, "comunasGratis": ["Maipú","Cerrillos","Estación Central"] },
   "produccion": { "diasHabilitados": ["viernes","sábado","domingo"], "horas": ["12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00","21:00"] },
@@ -456,37 +456,49 @@ insert into public.ingredients (id, categoria, linea, nombre, emoji, color, orde
   ('p_reineta','proteina','salada','Reineta','🐟','#5B8CB8',4,true,'{pescado}',70,7200,1300),
   ('p_salmon','proteina','salada','Salmón','🐠','#F2836B',5,true,'{pescado}',70,12900,1400),
   ('p_seitan','proteina','salada','Seitan','🌾','#B98B5E',6,true,'{vegana,vegetal}',70,5000,1150),
-  ('q_gouda','queso','salada','Gouda','🧀','#F0B429',1,true,'{}',25,6250,990),
-  ('q_llanero','queso','salada','Llanero','🧀','#E58A22',2,true,'{}',25,12000,930),
-  ('q_vegano','queso','salada','Vegano','🌱','#6FBF73',3,true,'{vegano}',25,12500,890),
-  ('q_mozzarella','queso','salada','Mozzarella','🧀','#F6E27A',4,true,'{}',25,7800,960),
+  ('q_gouda','queso','salada','Gouda','🧀','#F0B429',1,true,'{}',50,6250,990),
+  ('q_llanero','queso','salada','Llanero','🧀','#E58A22',2,true,'{}',50,12000,930),
+  ('q_vegano','queso','salada','Vegano','🌱','#6FBF73',3,true,'{vegano}',50,12500,890),
+  ('q_mozzarella','queso','salada','Mozzarella','🧀','#F6E27A',4,true,'{}',50,7800,960),
   ('a_tomate','acompanamiento','salada','Tomate','🍅','#DC4B3E',1,true,'{vegetal}',20,2000,375),
   ('a_choclo','acompanamiento','salada','Choclo','🌽','#F5C518',2,true,'{vegetal}',20,2500,375),
   ('a_champinon','acompanamiento','salada','Champiñón','🍄','#A78B6F',3,true,'{vegetal}',20,1670,375),
   ('a_palmitos','acompanamiento','salada','Palmitos','🌿','#DCCBA4',4,true,'{vegetal}',20,5630,400),
   ('a_pimenton','acompanamiento','salada','Pimentón','🫑','#C96A20',5,true,'{vegetal,picante}',20,3330,385),
-  ('a_aceituna','acompanamiento','salada','Aceituna','🫒','#5B6B4A',6,true,'{vegetal}',15,3890,400),
-  ('a_albahaca','acompanamiento','salada','Albahaca','🌱','#3B7A3E',7,true,'{vegetal}',10,6000,400),
+  ('a_aceituna','acompanamiento','salada','Aceituna','🫒','#5B6B4A',6,true,'{vegetal}',20,3890,400),
+  ('a_albahaca','acompanamiento','salada','Albahaca','🌱','#3B7A3E',7,true,'{vegetal}',20,6000,400),
   ('a_acelga','acompanamiento','salada','Acelga','🥬','#2F6B33',8,true,'{vegetal}',20,2500,375),
-  ('a_espinaca','acompanamiento','salada','Espinaca','🍃','#4E8B3A',9,true,'{vegetal}',15,4000,375),
+  ('a_espinaca','acompanamiento','salada','Espinaca','🍃','#4E8B3A',9,true,'{vegetal}',20,4000,375),
   ('a_cebolla','acompanamiento','salada','Cebolla caramelizada','🧅','#B0742A',10,true,'{vegetal}',20,7000,375),
   ('a_zapallo','acompanamiento','salada','Zapallo italiano','🥒','#7FA650',11,true,'{vegetal}',20,1800,375),
   ('d_nutella','proteina','dulce','Nutella','🥜','#6B3E26',1,true,'{}',50,9500,2200),
   ('d_chocolate','proteina','dulce','Chocolate','🍫','#5C3A21',2,true,'{}',45,12500,2100),
   ('d_manjar','proteina','dulce','Manjar','🍯','#E8B563',3,true,'{}',50,4800,2000),
   ('d_membrillo','proteina','dulce','Membrillo','🍎','#C4453B',4,true,'{vegetal}',45,3500,1900),
-  ('d_choclo','acompanamiento','dulce','Choclo con queso','🌽','#F5C518',1,true,'{vegetal}',30,3000,130),
-  ('d_pina','acompanamiento','dulce','Piña','🍍','#E8C220',2,true,'{vegetal}',30,2800,140),
-  ('d_mango','acompanamiento','dulce','Mango','🥭','#F09030',3,true,'{vegetal}',30,3500,150),
-  ('d_frutos','acompanamiento','dulce','Frutos rojos','🍓','#C23B4E',4,true,'{vegetal}',30,9500,160),
+  ('d_choclo','acompanamiento','dulce','Choclo con queso','🌽','#F5C518',1,true,'{vegetal}',20,3000,130),
+  ('d_pina','acompanamiento','dulce','Piña','🍍','#E8C220',2,true,'{vegetal}',20,2800,140),
+  ('d_mango','acompanamiento','dulce','Mango','🥭','#F09030',3,true,'{vegetal}',20,3500,150),
+  ('d_frutos','acompanamiento','dulce','Frutos rojos','🍓','#C23B4E',4,true,'{vegetal}',20,9500,160),
   ('d_frutossecos','acompanamiento','dulce','Mix de frutos secos','🥜','#A67C52',5,true,'{}',20,16000,180),
-  ('d_coco','acompanamiento','dulce','Coco rallado','🥥','#F3EAD8',6,true,'{vegetal}',12,6500,120),
-  ('d_almendra','acompanamiento','dulce','Almendras','🥜','#C89B6A',7,true,'{}',12,11000,170),
-  ('d_nuez','acompanamiento','dulce','Nueces','🌰','#8B5E34',8,true,'{}',12,14000,180),
-  ('d_mani','acompanamiento','dulce','Maní','🥜','#C49A6C',9,true,'{}',15,8000,130),
-  ('d_mermelada','acompanamiento','dulce','Mermelada de mora','🫐','#5B4B8A',10,true,'{vegetal}',25,6000,190),
+  ('d_coco','acompanamiento','dulce','Coco rallado','🥥','#F3EAD8',6,true,'{vegetal}',20,6500,120),
+  ('d_almendra','acompanamiento','dulce','Almendras','🥜','#C89B6A',7,true,'{}',20,11000,170),
+  ('d_nuez','acompanamiento','dulce','Nueces','🌰','#8B5E34',8,true,'{}',20,14000,180),
+  ('d_mani','acompanamiento','dulce','Maní','🥜','#C49A6C',9,true,'{}',20,8000,130),
+  ('d_mermelada','acompanamiento','dulce','Mermelada de mora','🫐','#5B4B8A',10,true,'{vegetal}',20,6000,190),
   ('d_chancaca','acompanamiento','dulce','Chancaca','🟤','#8A5A2B',11,true,'{}',20,3000,200)
 on conflict (id) do nothing;
+
+-- Gramaje uniforme por categoría (regla de negocio):
+--   proteína salada = 70 g · queso = 50 g · acompañamiento = 20 g (ambas líneas).
+-- Los rellenos dulce (categoria 'proteina', linea 'dulce') conservan su gramaje propio.
+update public.ingredients set porcion_gramos = 70 where categoria = 'proteina' and linea = 'salada';
+update public.ingredients set porcion_gramos = 50 where categoria = 'queso';
+update public.ingredients set porcion_gramos = 20 where categoria = 'acompanamiento';
+
+-- Acompañamientos flexibles: la línea dulce acepta hasta 4 (antes era 1).
+update public.settings
+   set data = jsonb_set(data, '{lineas,dulce,cantidadAcompanamientos}', '4'::jsonb, true)
+ where id = 'main';
 
 -- Bebidas
 insert into public.drinks (id, categoria, nombre, emoji, color, orden, disponible, precio, costo, azucar) values

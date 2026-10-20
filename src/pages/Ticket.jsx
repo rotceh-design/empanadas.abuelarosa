@@ -13,7 +13,7 @@ import logoAbuela from '../assets/abuela-rosa.png';
 
 export default function Ticket() {
   const { state } = useLocation();
-  const { whatsapp, settings, porId } = useCatalog();
+  const { settings, porId } = useCatalog();
   const { desbloqueadas } = usePlayer();
   const pedido = state?.pedido;
   const envioInicial = state?.envio;
@@ -25,7 +25,7 @@ export default function Ticket() {
   const fileRef = useRef(null);
 
   useEffect(() => {
-    if (envioInicial === 'texto') setAvisoWsp('Ticket listo: descargamos la imagen — adjúntala en el chat de WhatsApp');
+    if (envioInicial === 'texto') setAvisoWsp('WhatsApp abierto con el detalle de tu pedido — revísalo y presiona enviar');
     if (envioInicial === 'compartido') setAvisoWsp('Ticket enviado como imagen al WhatsApp');
   }, [envioInicial]);
 
@@ -92,11 +92,10 @@ export default function Ticket() {
       const r = await enviarPedidoWhatsApp({
         pedido,
         comprobanteDataUrl: pedido.comprobante || null,
-        numero: whatsapp,
       });
-      setAvisoWsp(r === 'compartido' ? 'Ticket enviado como imagen al WhatsApp'
-        : r === 'texto' ? 'Descargamos el ticket como imagen — adjúntalo en el chat de WhatsApp'
-        : r === 'cancelado' ? '' : 'No se pudo abrir WhatsApp');
+      setAvisoWsp(r !== 'texto' ? 'No se pudo abrir WhatsApp'
+        : pedido.comprobante ? 'WhatsApp abierto — adjunta el comprobante que descargamos al chat'
+          : 'WhatsApp abierto con el detalle de tu pedido — revísalo y presiona enviar');
     } finally {
       setEnviandoWsp(false);
     }

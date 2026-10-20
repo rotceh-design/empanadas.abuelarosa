@@ -152,7 +152,7 @@ ok('hay días solo saladas y días con dulce', diasConDulce > 0 && diasConDulce 
 const diaA = combinacionDelDia({ lineas, settings: SETTINGS_SEED, porId, fecha: diaFecha(0) });
 ok('primera del día coincide', diaA?.clave, trioA[0].clave);
 
-// Línea dulce: 1 relleno + 1 queso (los de la salada) + hasta 1 extra, rango [2790, 3390]
+// Línea dulce: 1 relleno + 1 queso (los de la salada) + hasta 4 extras, rango [2790, 3390]
 import { rangoEmpanada } from '../src/lib/precios.js';
 const rangoD = rangoEmpanada(SETTINGS_SEED, 'dulce');
 ok('dulce rango mín 2790', rangoD.min, 2790);
@@ -414,6 +414,73 @@ si('carro sin receta: no muestra detalle', itemRoto.conDetalles === false);
 // Item sin precio guardado → usa el cálculo del rango
 const itemSinPrecio = desgloseDeItem({ ...itemCarro, precioUnitario: undefined }, { porId, settings: SETTINGS_SEED });
 ok('carro sin precio: calcula el precio', itemSinPrecio.total, 3715);
+
+// ---------- WhatsApp: pedido completo al número fijo de pedidos ----------
+import { fmtCLP } from '../src/lib/formato.js';
+import { generarTicket, linkWhatsApp, enviarPedidoWhatsApp, WHATSAPP_PEDIDOS } from '../src/lib/ticket.js';
+
+const pedidoWsp = {
+  numero: 7,
+  items: [
+    {
+      tipo: 'empanada', nombre: 'Carne a la paila', proteina: 'Carne picada', queso: 'Gouda',
+      acompanamientos: ['Tomate', 'Choclo'], extrasCount: 1, etiquetas: ['picante'],
+      cantidad: 2, precioUnitario: 3490,
+    },
+    { tipo: 'bebida', nombre: 'Lata de Coca-Cola', emoji: '🥤', cantidad: 2, precio: 1700 },
+  ],
+  cliente: {
+    nombre: 'María José', telefono: '+56987654321',
+    direccion: 'Av. Italia 1234', comuna: 'Maipú', referencias: 'Portón verde',
+  },
+  entrega: { fecha: 'sábado 24/10', hora: '13:00' },
+  totales: { subtotal: 10380, ahorro: 300, delivery: 1000, total: 11080 },
+  oferta: { ahorro: 300, detalle: ['2×3 empanadas'] },
+};
+
+ok('WhatsApp: número fijo de pedidos', WHATSAPP_PEDIDOS, '56935438480');
+const wspUrl = linkWhatsApp(pedidoWsp);
+si('WhatsApp: URL wa.me/56935438480', wspUrl.startsWith('https://wa.me/56935438480?text='));
+const wspTexto = decodeURIComponent(wspUrl.slice(wspUrl.indexOf('?text=') + 6));
+si('WhatsApp: nombre con acentos intactos', wspTexto.includes('María José'));
+si('WhatsApp: dirección y comuna', wspTexto.includes('Av. Italia 1234, Maipú'));
+si('WhatsApp: teléfono de contacto', wspTexto.includes('+56987654321'));
+si('WhatsApp: precio unitario de empanada', wspTexto.includes(`${fmtCLP(3490)} c/u`));
+si('WhatsApp: línea total de empanadas', wspTexto.includes(fmtCLP(3490 * 2)));
+si('WhatsApp: precio unitario de bebida', wspTexto.includes(`${fmtCLP(1700)} c/u`));
+si('WhatsApp: opciones de la receta', wspTexto.includes('🥩 Carne picada') && wspTexto.includes('🥗 Tomate, Choclo'));
+si('WhatsApp: subtotal', wspTexto.includes(`Subtotal: *${fmtCLP(10380)}*`));
+si('WhatsApp: ahorro de oferta', wspTexto.includes(`Ahorro: *-${fmtCLP(300)}*`));
+si('WhatsApp: delivery', wspTexto.includes(`Delivery: *${fmtCLP(1000)}*`));
+si('WhatsApp: total igual al checkout', wspTexto.includes(`TOTAL: ${fmtCLP(11080)}`));
+si('WhatsApp: entrega', wspTexto.includes('Entrega: sábado 24/10 a las 13:00'));
+si('WhatsApp: número de pedido', wspTexto.includes('#0007'));
+si('WhatsApp: conserva saltos de línea', wspTexto.includes('\n'));
+
+// enviarPedidoWhatsApp abre wa.me con el texto completo (ventana simulada)
+const abiertas = [];
+globalThis.window = { open: (url) => { abiertas.push(url); return {}; } };
+const rEnvio = await enviarPedidoWhatsApp({ pedido: pedidoWsp });
+delete globalThis.window;
+ok('WhatsApp: enviar devuelve texto', rEnvio, 'texto');
+si('WhatsApp: enviar abre el destino correcto',
+  abiertas.length === 1 && abiertas[0].startsWith('https://wa.me/56935438480?text='));
+si('WhatsApp: el texto enviado es el pedido completo',
+  decodeURIComponent(abiertas[0].slice(abiertas[0].indexOf('?text=') + 6)).includes(`TOTAL: ${fmtCLP(11080)}`));
+
+// Carrito vacío o pedido nulo: no abre nada y no revienta
+const abiertas2 = [];
+globalThis.window = { open: (url) => { abiertas2.push(url); return {}; } };
+const rVacio = await enviarPedidoWhatsApp({ pedido: { items: [] } });
+const rNulo = await enviarPedidoWhatsApp({ pedido: null });
+delete globalThis.window;
+ok('WhatsApp: vacío/nulo no envía', `${rVacio}/${rNulo}`, 'error/error');
+si('WhatsApp: vacío/nulo no abre ventanas', abiertas2.length === 0);
+
+// Datos incompletos: el ticket sigue generándose sin errores
+const ticketSuelto = generarTicket({ numero: 1, items: [{ tipo: 'empanada', nombre: 'Sin precio', cantidad: 1 }] });
+si('WhatsApp: tolera cliente/totales/entrega faltantes', ticketSuelto.includes('#0001') && !ticketSuelto.includes('undefined'));
+si('WhatsApp: item sin precio no inventa monto', !ticketSuelto.includes(' c/u'));
 
 console.log(fallos === 0 ? '\n✓ Todas las pruebas pasaron' : `\n✗ ${fallos} prueba(s) fallaron`);
 process.exit(fallos === 0 ? 0 : 1);

@@ -20,7 +20,7 @@ const CAMPOS = [
 export default function Checkout() {
   const navigate = useNavigate();
   const { empanadas, bebidas, resumen, vaciar } = useCart();
-  const { settings, whatsapp } = useCatalog();
+  const { settings } = useCatalog();
   const { registrarPedido } = usePlayer();
 
   const [form, setForm] = useState({
@@ -97,7 +97,7 @@ export default function Checkout() {
     registrarPedido(pedido);
     let resultado = 'texto';
     try {
-      resultado = await enviarPedidoWhatsApp({ pedido: completo, comprobanteDataUrl: comprobante?.dataUrl || null, numero: whatsapp });
+      resultado = await enviarPedidoWhatsApp({ pedido: completo, comprobanteDataUrl: comprobante?.dataUrl || null });
     } catch { /* el ticket queda igual en la página siguiente */ }
     vaciar();
     navigate('/ticket', { state: { pedido: completo, envio: resultado }, replace: true });
@@ -207,7 +207,7 @@ export default function Checkout() {
             {enviando ? 'Enviando…' : `Enviar pedido por WhatsApp · ${fmtCLP(total)}`}
           </Boton>
           <p className="vt-cuerpo mt-1.5 text-center text-[11px] italic opacity-60">
-            Se enviará el ticket como imagen y tu comprobante al WhatsApp de la cocina
+            Se abrirá WhatsApp con el detalle completo del pedido — revísalo y presiona enviar
           </p>
         </div>
       </div>

@@ -57,7 +57,7 @@ export default function AdminConfig() {
           <Toggle label="Línea Dulce" value={form.lineas?.dulce?.activa} onChange={(v) => set('lineas.dulce.activa', v)} />
           {form.lineas?.dulce?.activa && (
             <>
-              <Input label="Extras en dulce (1 = un solo extra)" type="number" value={form.lineas?.dulce?.cantidadAcompanamientos}
+              <Input label="Acompañamientos en dulce (máx. 1 a 4)" type="number" value={form.lineas?.dulce?.cantidadAcompanamientos}
                 onChange={(v) => set('lineas.dulce.cantidadAcompanamientos', Number(v))} />
               <p className="text-xs font-extrabold uppercase tracking-wide opacity-60">Rango de precio dulce</p>
               <div className="grid grid-cols-2 gap-2">

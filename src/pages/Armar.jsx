@@ -39,7 +39,7 @@ const PASOS_DULCE = ['relleno', 'queso', 'extra', 'resumen'];
 export default function Armar() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { lineas, lineasTodas, precios, settings, whatsapp, bebidas: catalogoBebidas } = useCatalog();
+  const { lineas, lineasTodas, precios, settings, bebidas: catalogoBebidas } = useCatalog();
   const { agregarEmpanada, agregarBebida, empanadas, bebidas, resumen, vaciar } = useCart();
   const { registrarEmpanada, registrarPedido } = usePlayer();
 
@@ -51,7 +51,7 @@ export default function Armar() {
   const linea = lineasTodas.find((l) => l.id === lineaId) || lineasTodas[0];
   const lineaActiva = linea?.activa !== false;
   const esDulce = lineaId === 'dulce';
-  const cantAcomp = linea?.cantidadAcompanamientos ?? (esDulce ? 1 : 4);
+  const cantAcomp = linea?.cantidadAcompanamientos ?? 4;
   const pasos = esDulce ? PASOS_DULCE : PASOS_SALADA;
   const mensajes = esDulce ? MENSAJES_DULCE : MENSAJES_SALADA;
   const totalPasos = pasos.length;
@@ -86,7 +86,8 @@ export default function Armar() {
 
   // Desglose completo: de dónde sale cada peso del precio final.
   const desglose = useMemo(() => {
-    const faltan = !esDulce && proteina && queso ? Math.max(0, cantAcomp - acamps.length) : 0;
+    const minAcomp = esDulce ? 0 : 1;
+    const faltan = !esDulce && proteina && queso ? Math.max(0, minAcomp - acamps.length) : 0;
     return desgloseEmpanada(
       { proteina, queso, acompanamientos: acamps },
       { precios, lineas: settings?.lineas },
@@ -94,7 +95,7 @@ export default function Armar() {
       faltan,
       lineaId,
     );
-  }, [esDulce, proteina, queso, acamps, cantAcomp, extras, precios, settings, lineaId]);
+  }, [esDulce, proteina, queso, acamps, extras, precios, settings, lineaId]);
 
   const precio = desglose.total;
 
@@ -104,7 +105,7 @@ export default function Armar() {
     if (pasoActual === 'relleno') return Boolean(proteina);
     if (pasoActual === 'proteina') return Boolean(proteina);
     if (pasoActual === 'queso') return Boolean(queso);
-    if (pasoActual === 'acamps') return acamps.length === cantAcomp;
+    if (pasoActual === 'acamps') return acamps.length >= 1;
     return true;
   };
 
@@ -211,7 +212,7 @@ export default function Armar() {
       const creado = await crearPedido(pedido);
       const completo = { ...pedido, numero: creado.numero, id: creado.id };
       registrarPedido(pedido);
-      const r = await enviarPedidoWhatsApp({ pedido: completo, numero: whatsapp });
+      const r = await enviarPedidoWhatsApp({ pedido: completo });
       vaciar();
       navigate('/ticket', { state: { pedido: completo, envio: r }, replace: true });
     } finally {
@@ -363,8 +364,8 @@ export default function Armar() {
             <div>
               <div className="mb-3 flex items-end justify-between">
                 <div>
-                  <h2 className="vt-titulo text-xl">¿Un extra?</h2>
-                  <p className="text-sm opacity-70">Opcional — hasta 1 extra ({acomps.length}/1)</p>
+                  <h2 className="vt-titulo text-xl">¿Un toque dulce?</h2>
+                  <p className="text-sm opacity-70">Opcional — hasta {cantAcomp} ({acomps.length}/{cantAcomp})</p>
                 </div>
                 {acomps.length === 0 && (
                   <button
@@ -380,7 +381,7 @@ export default function Armar() {
                 items={linea.acompanamientos}
                 seleccionados={acomps.map((a) => a.id)}
                 onToggle={toggleAcomp}
-                max={1}
+                max={cantAcomp}
                 compact
               />
             </div>
@@ -412,8 +413,8 @@ export default function Armar() {
             <div>
               <div className="mb-3 flex items-end justify-between">
                 <div>
-                  <h2 className="font-display text-xl font-extrabold">Elige {cantAcomp} acompañamientos</h2>
-                  <p className="text-sm opacity-70">Sin repetir — llevas {acomps.length}/{cantAcomp}</p>
+                  <h2 className="font-display text-xl font-extrabold">Elige hasta {cantAcomp} acompañamientos</h2>
+                  <p className="text-sm opacity-70">Sin repetir — llevas {acomps.length}/{cantAcomp} · mínimo 1</p>
                 </div>
                 <button
                   onClick={() => setAcomps(linea.acompanamientos.slice(0, cantAcomp))}

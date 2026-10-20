@@ -106,7 +106,7 @@ export function CatalogProvider({ children }) {
     };
     const salada = porLinea('salada');
     const dulce = porLinea('dulce');
-    const cantDulce = conf?.lineas?.dulce?.cantidadAcompanamientos ?? 1;
+    const cantDulce = conf?.lineas?.dulce?.cantidadAcompanamientos ?? 4;
 
     const saladaActiva = conf?.lineas?.salada?.activa !== false;
     const dulceActiva = Boolean(conf?.lineas?.dulce?.activa);
