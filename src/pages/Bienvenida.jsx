@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SelloCircular, SelloLinea, Floritura, MarcoOrnamental, SeparadorOrnamental } from '../components/vintage/Ornamentos';
 import ModalPago from '../components/vintage/ModalPago';
-import { IconoEmpanada, IconoIngrediente } from '../components/Iconos';
+import { IconoEmpanada, AvatarIngrediente } from '../components/Iconos';
 import { useCatalog } from '../contexts/CatalogContext';
 import { useCart } from '../contexts/CartContext';
 import { usePlayer } from '../contexts/PlayerContext';
@@ -156,7 +156,7 @@ export default function Bienvenida() {
               className="flex w-full max-w-[15.5rem] justify-center sm:max-w-none sm:flex-1"
             >
               <SelloLinea
-                icono={<IconoEmpanada size={56} color="#b5763a" />}
+                icono={<IconoEmpanada size={80} color="#b5763a" />}
                 titulo={l.id === 'dulce' ? 'EMPANADAS DULCES' : 'EMPANADAS SALADAS'}
                 subtitulo={l.id === 'dulce' ? 'Nutella, chocolate, manjar y más' : 'Carne, pollo, camarón y más'}
                 onClick={() => elegirLinea(l.id)}
@@ -194,10 +194,24 @@ export default function Bienvenida() {
                   className="vt-sello rounded-3xl px-4 py-5"
                 >
                   <div className="flex flex-col items-center">
-                    <IconoEmpanada size={48} color="#b5763a" />
-                    <span className="mt-2 inline-flex items-center gap-1.5">
+                    <span
+                      className="flex h-28 w-28 items-center justify-center rounded-full border-[3px] border-[#4a2c17]"
+                      style={{
+                        background: 'radial-gradient(circle at 50% 30%, #fffaf0 0%, #f3e6c8 80%)',
+                        boxShadow: 'inset 0 0 0 2px #f3e6c8, inset 0 0 0 4.5px #4a2c17, 0 10px 22px -10px rgb(42 22 11 / 0.4)',
+                      }}
+                    >
+                      <IconoEmpanada size={96} color="#b5763a" />
+                    </span>
+                    <span className="mt-3 inline-flex items-center gap-1.5">
                       {[combo.proteinaId, combo.quesoId, ...combo.acompanamientosIds].map((id) => (
-                        <IconoIngrediente key={id} ing={porId[id] || { id }} size={18} className="opacity-80" />
+                        <span
+                          key={id}
+                          className="rounded-full border border-[#4a2c17]/30 bg-[#fffaf0] p-0.5"
+                          style={{ boxShadow: 'inset 0 0 0 1px rgb(74 44 23 / 0.18)' }}
+                        >
+                          <AvatarIngrediente ing={porId[id] || { id }} size={26} className="opacity-90" />
+                        </span>
                       ))}
                     </span>
                   </div>
@@ -252,7 +266,7 @@ export default function Bienvenida() {
                             : 'border-[#4a2c17]/25 bg-[#f3e6c8] hover:bg-[#e8d3a6]'
                         }`}
                       >
-                        <IconoIngrediente ing={b} size={16} />
+                        <AvatarIngrediente ing={b} size={16} />
                         <span className="vt-serif font-semibold">
                           {b.nombre.replace(' lata', '')}
                         </span>

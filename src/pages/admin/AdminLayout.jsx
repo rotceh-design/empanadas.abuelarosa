@@ -9,6 +9,7 @@ import logoAbuela from '../../assets/abuela-rosa.png';
 import {
   IconoPanel, IconoPedidos, IconoCatalogo, IconoInventario,
   IconoOfertas, IconoProduccion, IconoMetricas, IconoConfig,
+  IconoAlerta, IconoCandado, IconoReporte,
 } from '../../components/IconosAdmin';
 
 const TABS = [
@@ -19,6 +20,7 @@ const TABS = [
   { to: '/admin/ofertas', icon: IconoOfertas, label: 'Ofertas' },
   { to: '/admin/produccion', icon: IconoProduccion, label: 'Producción' },
   { to: '/admin/metricas', icon: IconoMetricas, label: 'Métricas' },
+  { to: '/admin/reportes', icon: IconoReporte, label: 'Reportes' },
   { to: '/admin/config', icon: IconoConfig, label: 'Config' },
 ];
 
@@ -65,7 +67,7 @@ export default function AdminLayout() {
   if (!demo && usuario && !esAdmin) {
     return (
       <div className="vt-papel vt-tinta flex min-h-screen flex-col items-center justify-center px-4 text-center">
-        <span className="text-5xl">🔒</span>
+        <span className="text-5xl"><IconoCandado size={48} className="mx-auto" /></span>
         <h1 className="vt-titulo mt-3 text-2xl">Sin permisos</h1>
         <p className="vt-cuerpo mt-1 max-w-sm text-sm italic opacity-70">
           {usuario.email} no está habilitada como administradora del panel.
@@ -109,7 +111,8 @@ export default function AdminLayout() {
                 title="Ingredientes con stock bajo — ver inventario"
                 className="btn-tap rounded-full border-2 border-[#8b4513]/40 bg-amber-500/25 px-2 py-1 text-[11px] font-extrabold text-[#8b4513]"
               >
-                ⚠ {alertas.length} por renovar
+                <IconoAlerta size={12} className="inline-flex" />
+                {' '}{alertas.length} por renovar
               </button>
             )}
             <button onClick={() => { setNuevos(0); navigate('/admin/pedidos'); }} className="vt-btn btn-tap rounded-xl px-3 py-2 text-xs">

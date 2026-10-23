@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../contexts/CartContext';
 import { useCatalog } from '../contexts/CatalogContext';
 import { Boton, Titulo, Vacio } from '../components/ui';
-import { IconoIngrediente, IconosEmpanada, IconoLata } from '../components/Iconos';
+import { AvatarIngrediente, IconosEmpanada, IconoLata } from '../components/Iconos';
 import { SeparadorOrnamental } from '../components/vintage/Ornamentos';
 import { desgloseDeItem } from '../lib/precios';
 import FichaEmpanada from '../components/FichaEmpanada';
@@ -84,7 +84,7 @@ export default function Carrito() {
         <div className="mb-3 space-y-2">
           {bebidas.map((b) => (
             <div key={b.cartId} className="vt-sello flex items-center gap-3 rounded-2xl px-3 py-2">
-              <IconoIngrediente ing={porBebida[b.id] || { id: b.id, categoria: 'bebida', color: b.color }} size={22} />
+              <AvatarIngrediente ing={porBebida[b.id] || { id: b.id, categoria: 'bebida', color: b.color }} size={22} />
               <span className="vt-serif flex-1 text-sm font-bold">{b.nombre}</span>
               <button onClick={() => cambiarCantidadBebida(b.cartId, -1)} className="btn-tap flex h-8 w-8 items-center justify-center rounded-lg border-2 border-[#4a2c17]/25 font-bold">−</button>
               <span className="vt-serif w-6 text-center font-extrabold">{b.cantidad}</span>
@@ -102,7 +102,7 @@ export default function Carrito() {
             onClick={() => agregarBebida(b)}
             className="btn-tap flex items-center gap-1.5 rounded-full border-2 border-[#4a2c17]/25 bg-[#f7ecd4] px-3 py-2 text-sm font-bold"
           >
-            <IconoIngrediente ing={b} size={16} />
+            <AvatarIngrediente ing={b} size={16} />
             {b.nombre.replace(' lata', '')} · {fmtCLP(b.precio)}
           </button>
         ))}

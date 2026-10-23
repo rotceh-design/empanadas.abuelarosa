@@ -1,22 +1,48 @@
 // Utilidades de imagen en el navegador: compresión con canvas y
 // compartir archivos vía Web Share API (WhatsApp nativo) con fallbacks.
 
-export async function comprimirImagen(file, { maxLado = 1000, calidad = 0.78, formato = 'image/webp' } = {}) {
+// Comprime y, si `maxKB` está definido, itera hasta quedar bajo ese peso:
+// primero baja la calidad y, si no alcanza, reduzce también el tamaño.
+export async function comprimirImagen(file, { maxLado = 1000, calidad = 0.78, formato = 'image/webp', maxKB = 0 } = {}) {
   const img = await cargarImagen(file);
   const escala = Math.min(1, maxLado / Math.max(img.width, img.height));
-  const w = Math.round(img.width * escala);
-  const h = Math.round(img.height * escala);
+  let w = Math.round(img.width * escala);
+  let h = Math.round(img.height * escala);
 
   const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
   const ctx = canvas.getContext('2d');
-  ctx.drawImage(img, 0, 0, w, h);
+
+  const codificar = (q) => {
+    canvas.width = w;
+    canvas.height = h;
+    ctx.drawImage(img, 0, 0, w, h);
+    let dataUrl = canvas.toDataURL(formato, q);
+    if (!dataUrl.startsWith(`data:${formato}`)) dataUrl = canvas.toDataURL('image/jpeg', q);
+    return dataUrl;
+  };
+
+  let calidadActual = calidad;
+  let dataUrl = codificar(calidadActual);
+  let blob = await (await fetch(dataUrl)).blob();
+
+  if (maxKB > 0) {
+    const tope = maxKB * 1024;
+    let reduccionesTam = 0;
+    while (blob.size > tope && reduccionesTam < 3) {
+      if (calidadActual > 0.35) {
+        calidadActual = Math.max(0.35, calidadActual - 0.1);
+      } else {
+        w = Math.round(w * 0.75);
+        h = Math.round(h * 0.75);
+        reduccionesTam += 1;
+      }
+      dataUrl = codificar(calidadActual);
+      blob = await (await fetch(dataUrl)).blob();
+    }
+  }
+
   if (img.src?.startsWith?.('blob:')) URL.revokeObjectURL(img.src);
 
-  let dataUrl = canvas.toDataURL(formato, calidad);
-  if (!dataUrl.startsWith(`data:${formato}`)) dataUrl = canvas.toDataURL('image/jpeg', calidad);
-  const blob = await (await fetch(dataUrl)).blob();
   const ext = dataUrl.startsWith('data:image/webp') ? 'webp' : 'jpg';
   const nombre = (file.name || 'foto').replace(/\.\w+$/, '');
   const archivo = new File([blob], `${nombre}.${ext}`, { type: blob.type });

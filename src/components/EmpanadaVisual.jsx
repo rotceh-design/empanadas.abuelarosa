@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMemo } from 'react';
-import { IconoIngrediente } from './Iconos';
+import { AvatarIngrediente } from './Iconos';
 import empanadaImg from '../assets/empanada.png';
 
 // Empanada visual por capas: masa → relleno → acompañamientos flotando.
@@ -73,7 +73,7 @@ export default function EmpanadaVisual({ proteina, queso, acompanamientos = [], 
                 exit={{ opacity: 0, scale: 0.2 }}
                 transition={{ type: 'spring', stiffness: 260, damping: 16 }}
               >
-                <IconoIngrediente ing={ing} size={22} />
+                <AvatarIngrediente ing={ing} size={22} />
               </motion.div>
             );
           })}

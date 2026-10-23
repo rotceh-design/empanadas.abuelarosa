@@ -21,13 +21,13 @@ export function alertasStock({ ingredientes = [], bebidas = [], settings = {} } 
   ingredientes.forEach((ing) => {
     const r = rendimientoEmpanadas(ing);
     if (r !== null && r <= umbral) {
-      lista.push({ tipo: 'ingrediente', id: ing.id, nombre: ing.nombre, emoji: ing.emoji, rendimiento: r, umbral });
+      lista.push({ tipo: 'ingrediente', id: ing.id, nombre: ing.nombre, emoji: ing.emoji, foto: ing.foto, rendimiento: r, umbral });
     }
   });
   bebidas.forEach((b) => {
     const r = rendimientoBebidas(b.stockUnidades);
     if (r !== null && r <= umbral) {
-      lista.push({ tipo: 'bebida', id: b.id, nombre: b.nombre, emoji: b.emoji, rendimiento: r, umbral, unidades: true });
+      lista.push({ tipo: 'bebida', id: b.id, nombre: b.nombre, emoji: b.emoji, foto: b.foto, rendimiento: r, umbral, unidades: true });
     }
   });
   const masaGramos = settings?.inventario?.masaGramos;

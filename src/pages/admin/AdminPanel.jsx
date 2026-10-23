@@ -6,8 +6,9 @@ import { useCatalog } from '../../contexts/CatalogContext';
 import { fmtCLP } from '../../lib/formato';
 import {
   IconoPedidos, IconoInventario, IconoCatalogo, IconoOfertas,
-  IconoProduccion, IconoMetricas, IconoConfig,
+  IconoProduccion, IconoMetricas, IconoConfig, IconoReporte,
 } from '../../components/IconosAdmin';
+import { ESTADO_ICONOS } from '../../components/IconosEstados';
 
 const ACCESOS = [
   { to: '/admin/pedidos', icon: IconoPedidos, label: 'Pedidos', desc: 'Estados y cobros' },
@@ -16,6 +17,7 @@ const ACCESOS = [
   { to: '/admin/ofertas', icon: IconoOfertas, label: 'Ofertas', desc: 'Bundles y reglas' },
   { to: '/admin/produccion', icon: IconoProduccion, label: 'Producción', desc: 'Plan del día' },
   { to: '/admin/metricas', icon: IconoMetricas, label: 'Métricas', desc: 'Ventas y margen' },
+  { to: '/admin/reportes', icon: IconoReporte, label: 'Reportes', desc: 'Excel y Word' },
   { to: '/admin/config', icon: IconoConfig, label: 'Config', desc: 'Negocio y precios' },
 ];
 
@@ -88,18 +90,21 @@ export default function AdminPanel() {
           </Link>
         </div>
         <div className="mt-2 flex flex-wrap gap-2">
-          {ESTADOS.map((e) => (
-            <Link
-              key={e.id}
-              to="/admin/pedidos"
-              className="btn-tap vt-ficha flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold"
-              style={{ borderLeft: `4px solid ${e.color}` }}
-            >
-              <span aria-hidden>{e.emoji}</span>
-              <span>{e.label}</span>
-              <span className="vt-titulo text-sm">{datos.porEstado[e.id] || 0}</span>
-            </Link>
-          ))}
+          {ESTADOS.map((e) => {
+            const Icono = ESTADO_ICONOS[e.id];
+            return (
+              <Link
+                key={e.id}
+                to="/admin/pedidos"
+                className="btn-tap vt-ficha flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold"
+                style={{ borderLeft: `4px solid ${e.color}`, color: e.color }}
+              >
+                {Icono && <Icono size={14} />}
+                <span className="text-tierra-900">{e.label}</span>
+                <span className="vt-titulo text-sm">{datos.porEstado[e.id] || 0}</span>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
@@ -120,12 +125,15 @@ export default function AdminPanel() {
           <ul className="mt-2 space-y-2">
             {ultimos.map((p) => {
               const e = ESTADOS.find((x) => x.id === p.status) || ESTADOS[0];
+              const Icono = ESTADO_ICONOS[e.id];
               return (
                 <li key={p.id} className="vt-ficha flex items-center gap-3 rounded-xl px-3 py-2 text-sm"
                   style={{ borderLeft: `4px solid ${e.color}` }}>
                   <span className="vt-titulo text-sm">#{String(p.numero || 0).padStart(4, '0')}</span>
                   <span className="min-w-0 flex-1 truncate font-bold">{p.cliente?.nombre || '—'}</span>
-                  <span className="hidden text-xs opacity-60 sm:inline">{e.emoji} {e.label}</span>
+                  <span className="hidden items-center gap-1 text-xs opacity-60 sm:inline-flex" style={{ color: e.color }}>
+                    {Icono && <Icono size={12} />} <span className="text-tierra-700">{e.label}</span>
+                  </span>
                   <span className="vt-titulo text-sm">{fmtCLP(p.totales?.total || 0)}</span>
                 </li>
               );

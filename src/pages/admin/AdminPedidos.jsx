@@ -5,6 +5,9 @@ import { fmtCLP } from '../../lib/formato';
 import { useCatalog } from '../../contexts/CatalogContext';
 import { costoPedido } from '../../lib/costos';
 import { signoStock } from '../../lib/stock';
+import { IconosEmpanada, AvatarIngrediente } from '../../components/Iconos';
+import { IconoComprobante, IconoUbicacion, IconoLupa } from '../../components/IconosAdmin';
+import { ESTADO_ICONOS } from '../../components/IconosEstados';
 
 export default function AdminPedidos() {
   const [pedidos, setPedidos] = useState([]);
@@ -51,11 +54,16 @@ export default function AdminPedidos() {
 
       <div className="mt-3 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
         <Chip activo={filtro === 'todos'} onClick={() => setFiltro('todos')}>Todos ({pedidos.length})</Chip>
-        {ESTADOS.map((e) => (
-          <Chip key={e.id} activo={filtro === e.id} onClick={() => setFiltro(e.id)} color={e.color}>
-            {e.emoji} {e.label} ({pedidos.filter((p) => p.status === e.id).length})
-          </Chip>
-        ))}
+        {ESTADOS.map((e) => {
+          const Icono = ESTADO_ICONOS[e.id];
+          return (
+            <Chip key={e.id} activo={filtro === e.id} onClick={() => setFiltro(e.id)} color={e.color}>
+              <span className="flex items-center gap-1">
+                {Icono && <Icono size={13} />} {e.label} ({pedidos.filter((p) => p.status === e.id).length})
+              </span>
+            </Chip>
+          );
+        })}
       </div>
 
       <div className="mt-4 space-y-3">
@@ -87,13 +95,13 @@ export default function AdminPedidos() {
                     </p>
                     <p className="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-extrabold"
                        style={{ background: `${estado.color}22`, color: estado.color }}>
-                      {estado.emoji} {estado.label}
+                      {(() => { const Icono = ESTADO_ICONOS[estado.id]; return Icono ? <Icono size={12} /> : null; })()} {estado.label}
                     </p>
                     {p.comprobante && (
                       <a href={p.comprobante} target="_blank" rel="noreferrer"
                          title="Ver comprobante de pago"
                          className="btn-tap mt-1 inline-flex items-center gap-1 rounded-full bg-verde-500/15 px-2 py-0.5 text-[11px] font-extrabold text-verde-600">
-                        🧾 Ver comprobante
+                        <IconoComprobante size={12} /> Ver comprobante
                       </a>
                     )}
                   </div>
@@ -114,7 +122,10 @@ export default function AdminPedidos() {
                       <div className="vt-ficha-suave mt-3 space-y-2 rounded-2xl p-3 text-sm">
                         {empanadas.map((e, i) => (
                           <div key={i} className="vt-ficha-suave rounded-2xl p-2.5">
-                            <p className="font-extrabold">🥟 {e.nombre} ×{e.cantidad}</p>
+                            <p className="flex items-center gap-1.5 font-extrabold">
+                              <IconosEmpanada proteinaId={e.proteinaId} quesoId={e.quesoId} acompanamientosIds={e.acompanamientosIds} porId={porId} size={13} />
+                              {e.nombre} ×{e.cantidad}
+                            </p>
                             <p className="opacity-70">{[e.proteina, e.queso].filter(Boolean).join(' + ')}</p>
                             <p className="opacity-70">{(e.acompanamientos || []).join(', ')}</p>
                             {e.extrasCount > 0 && <p className="text-[11px] font-bold text-naranja-600">+{e.extrasCount} extras</p>}
@@ -122,18 +133,25 @@ export default function AdminPedidos() {
                         ))}
                         {bebidas.map((b, i) => (
                           <div key={i} className="vt-ficha-suave rounded-2xl p-2.5">
-                            <p className="font-extrabold">🥤 {b.nombre} ×{b.cantidad}</p>
+                            <p className="flex items-center gap-1.5 font-extrabold">
+                              <AvatarIngrediente ing={{ id: b.id, foto: b.foto }} size={13} />
+                              {b.nombre} ×{b.cantidad}
+                            </p>
                           </div>
                         ))}
-                        {p.cliente?.direccion && <p className="opacity-70">📍 {p.cliente.direccion}</p>}
-                        {p.cliente?.referencias && <p className="opacity-70">🔎 {p.cliente.referencias}</p>}
+                        {p.cliente?.direccion && (
+                          <p className="flex items-center gap-1.5 opacity-70"><IconoUbicacion size={13} /> {p.cliente.direccion}</p>
+                        )}
+                        {p.cliente?.referencias && (
+                          <p className="flex items-center gap-1.5 opacity-70"><IconoLupa size={13} /> {p.cliente.referencias}</p>
+                        )}
                         <p className="vt-ficha-suave rounded-2xl px-2.5 py-2 font-bold">
-                          💰 Costo ingredientes {fmtCLP(costoPedido(p, { porId, porBebida, settings }))} ·{' '}
+                          Costo ingredientes {fmtCLP(costoPedido(p, { porId, porBebida, settings }))} ·{' '}
                           margen <b className="text-verde-700">{fmtCLP((p.totales?.total || 0) - costoPedido(p, { porId, porBebida, settings }))}</b>
                         </p>
                         {p.comprobante && (
                           <div className="vt-ficha-suave rounded-2xl p-2.5">
-                            <p className="mb-1 font-extrabold">🧾 Comprobante de pago</p>
+                            <p className="mb-1 flex items-center gap-1.5 font-extrabold"><IconoComprobante size={14} /> Comprobante de pago</p>
                             <a href={p.comprobante} target="_blank" rel="noreferrer">
                               <img src={p.comprobante} alt="Comprobante de pago" className="panel-sm max-h-56 w-full object-cover" />
                             </a>
@@ -145,17 +163,20 @@ export default function AdminPedidos() {
                 </AnimatePresence>
 
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {ESTADOS.map((e) => (
-                    <button
-                      key={e.id}
-                      onClick={() => cambiar(p, e.id)}
-                      disabled={p.status === e.id}
-                      className="btn-tap rounded-xl px-2.5 py-1.5 text-[11px] font-extrabold disabled:opacity-30"
-                      style={{ background: p.status === e.id ? e.color : `${e.color}18`, color: p.status === e.id ? '#fff' : e.color }}
-                    >
-                      {e.emoji} {e.label}
-                    </button>
-                  ))}
+                  {ESTADOS.map((e) => {
+                    const Icono = ESTADO_ICONOS[e.id];
+                    return (
+                      <button
+                        key={e.id}
+                        onClick={() => cambiar(p, e.id)}
+                        disabled={p.status === e.id}
+                        className="btn-tap flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-extrabold disabled:opacity-30"
+                        style={{ background: p.status === e.id ? e.color : `${e.color}18`, color: p.status === e.id ? '#fff' : e.color }}
+                      >
+                        {Icono && <Icono size={12} />} {e.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </motion.div>
             );

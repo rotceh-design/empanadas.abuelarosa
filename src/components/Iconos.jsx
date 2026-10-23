@@ -643,13 +643,35 @@ export function IconoIngrediente({ ing, size = 22, className = '' }) {
   );
 }
 
+// Avatar de ingrediente/bebida: si el catálogo trae foto real, la muestra;
+// si no, dibuja el icono SVG (mismo look que la tienda siempre).
+export function AvatarIngrediente({ ing, size = 24, className = '' }) {
+  if (!ing) return null;
+  if (ing.foto) {
+    return (
+      <img
+        src={ing.foto}
+        alt={ing.nombre || ''}
+        draggable={false}
+        loading="lazy"
+        className={`shrink-0 rounded-full object-cover ${className}`}
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+  return <IconoIngrediente ing={ing} size={size} className={className} />;
+}
+
+// Mismo avatar para bebidas (foto > lata SVG con su color).
+export const AvatarBebida = AvatarIngrediente;
+
 // Fila de iconos de una empanada (proteína, queso y acompañamientos).
 export function IconosEmpanada({ proteinaId, quesoId, acompanamientosIds = [], porId, size = 18 }) {
   const ids = [proteinaId, quesoId, ...acompanamientosIds].filter(Boolean);
   return (
     <span className="inline-flex items-center gap-1">
       {ids.map((id, i) => (
-        <IconoIngrediente key={`${id}-${i}`} ing={porId?.[id] || { id }} size={size} />
+        <AvatarIngrediente key={`${id}-${i}`} ing={porId?.[id] || { id }} size={size} />
       ))}
     </span>
   );

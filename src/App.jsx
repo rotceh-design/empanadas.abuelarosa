@@ -27,6 +27,7 @@ const AdminInventario = lazy(() => import('./pages/admin/AdminInventario'));
 const AdminOfertas = lazy(() => import('./pages/admin/AdminOfertas'));
 const AdminProduccion = lazy(() => import('./pages/admin/AdminProduccion'));
 const AdminMetricas = lazy(() => import('./pages/admin/AdminMetricas'));
+const AdminReportes = lazy(() => import('./pages/admin/AdminReportes'));
 const AdminConfig = lazy(() => import('./pages/admin/AdminConfig'));
 
 export default function App() {
@@ -60,6 +61,7 @@ export default function App() {
                       <Route path="ofertas" element={<AdminOfertas />} />
                       <Route path="produccion" element={<AdminProduccion />} />
                       <Route path="metricas" element={<AdminMetricas />} />
+                      <Route path="reportes" element={<AdminReportes />} />
                       <Route path="config" element={<AdminConfig />} />
                     </Route>
                   </Routes>

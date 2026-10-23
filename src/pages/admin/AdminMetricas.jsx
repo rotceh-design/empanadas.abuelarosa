@@ -4,6 +4,12 @@ import { useCatalog } from '../../contexts/CatalogContext';
 import { fmtCLP } from '../../lib/formato';
 import { costoPedido } from '../../lib/costos';
 import { leerLog } from '../../lib/inventario';
+import { AvatarIngrediente } from '../../components/Iconos';
+import {
+  IconoMoneda, IconoComprobante, IconoTendencia, IconoTicket,
+  IconoEmpanadaLinea, IconoBalanza, IconoCalendario, IconoReloj,
+  IconoUbicacion, IconoCliente, IconoIngredientes, IconoTrofeo,
+} from '../../components/IconosAdmin';
 
 const RANGOS = [['7', '7 días'], ['30', '30 días'], ['todo', 'Todo']];
 
@@ -119,17 +125,17 @@ export default function AdminMetricas() {
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Kpi label="Ventas" valor={fmtCLP(m.totalVentas)} emoji="💰" />
-        <Kpi label="Costo ingredientes" valor={fmtCLP(m.totalCosto)} emoji="🧾" />
-        <Kpi label={`Margen (${m.margenPct}%)`} valor={fmtCLP(m.margen)} emoji="📈" verde={m.margen >= 0} />
-        <Kpi label="Ticket promedio" valor={fmtCLP(m.ticketPromedio)} emoji="🎟️" />
-        <Kpi label="Empanadas" valor={m.empanadasVendidas} emoji="🥟" />
-        <Kpi label="Merma registrada" valor={m.mermaCLP > 0 ? fmtCLP(m.mermaCLP) : '—'} emoji="🪫" rojo={m.mermaCLP > 0} />
+        <Kpi label="Ventas" valor={fmtCLP(m.totalVentas)} icono={IconoMoneda} />
+        <Kpi label="Costo ingredientes" valor={fmtCLP(m.totalCosto)} icono={IconoComprobante} />
+        <Kpi label={`Margen (${m.margenPct}%)`} valor={fmtCLP(m.margen)} icono={IconoTendencia} verde={m.margen >= 0} />
+        <Kpi label="Ticket promedio" valor={fmtCLP(m.ticketPromedio)} icono={IconoTicket} />
+        <Kpi label="Empanadas" valor={m.empanadasVendidas} icono={IconoEmpanadaLinea} />
+        <Kpi label="Merma registrada" valor={m.mermaCLP > 0 ? fmtCLP(m.mermaCLP) : '—'} icono={IconoBalanza} rojo={m.mermaCLP > 0} />
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <div className="vt-ficha rounded-3xl p-4">
-          <h3 className="vt-titulo">📆 Ventas por día</h3>
+          <h3 className="vt-titulo flex items-center gap-2"><IconoCalendario size={17} className="opacity-70" /> Ventas por día</h3>
           {m.porDia.length === 0 ? <p className="mt-2 text-sm opacity-60">Sin datos aún</p> : (
             <ul className="mt-2 space-y-1.5 text-sm">
               {m.porDia.map(([d, x]) => (
@@ -146,7 +152,7 @@ export default function AdminMetricas() {
         </div>
 
         <div className="vt-ficha rounded-3xl p-4">
-          <h3 className="vt-titulo">🕐 Hora en que piden</h3>
+          <h3 className="vt-titulo flex items-center gap-2"><IconoReloj size={17} className="opacity-70" /> Hora en que piden</h3>
           <ul className="mt-2 space-y-1.5 text-sm">
             {m.porHora.length === 0 && <p className="text-sm opacity-60">Sin datos</p>}
             {m.porHora.map(([h, n]) => (
@@ -156,7 +162,7 @@ export default function AdminMetricas() {
         </div>
 
         <div className="vt-ficha rounded-3xl p-4">
-          <h3 className="vt-titulo">📍 Comunas</h3>
+          <h3 className="vt-titulo flex items-center gap-2"><IconoUbicacion size={17} className="opacity-70" /> Comunas</h3>
           <ul className="mt-2 space-y-1.5 text-sm">
             {m.porComuna.map(([c, n]) => (
               <li key={c} className="flex justify-between"><span className="font-bold">{c}</span><span>{n} pedidos</span></li>
@@ -165,7 +171,7 @@ export default function AdminMetricas() {
         </div>
 
         <div className="vt-ficha rounded-3xl p-4">
-          <h3 className="vt-titulo">👥 Clientes que más repiten</h3>
+          <h3 className="vt-titulo flex items-center gap-2"><IconoCliente size={17} className="opacity-70" /> Clientes que más repiten</h3>
           <ul className="mt-2 space-y-1.5 text-sm">
             {m.clientes.length === 0 && <p className="text-sm opacity-60">Sin datos</p>}
             {m.clientes.map((c) => (
@@ -178,16 +184,19 @@ export default function AdminMetricas() {
         </div>
 
         <div className="vt-ficha rounded-3xl p-4">
-          <h3 className="vt-titulo">🥗 Ingredientes top</h3>
+          <h3 className="vt-titulo flex items-center gap-2"><IconoIngredientes size={17} className="opacity-70" /> Ingredientes top</h3>
           <ul className="mt-2 space-y-1.5 text-sm">
             {m.rankingIng.map(([id, n]) => (
-              <li key={id} className="flex justify-between"><span className="font-bold">{porId[id]?.emoji} {porId[id]?.nombre || id}</span><span>{n}</span></li>
+              <li key={id} className="flex justify-between">
+                <span className="flex items-center gap-1.5 font-bold"><AvatarIngrediente ing={porId[id] || { id }} size={14} /> {porId[id]?.nombre || id}</span>
+                <span>{n}</span>
+              </li>
             ))}
           </ul>
         </div>
 
         <div className="vt-ficha rounded-3xl p-4">
-          <h3 className="vt-titulo">🏆 Empanadas más vendidas</h3>
+          <h3 className="vt-titulo flex items-center gap-2"><IconoTrofeo size={17} className="opacity-70" /> Empanadas más vendidas</h3>
           <ul className="mt-2 space-y-1.5 text-sm">
             {m.combos.map(([k, x]) => (
               <li key={k} className="flex justify-between gap-2"><span className="truncate font-bold">{x.nombre}</span><span>{x.n}</span></li>
@@ -199,10 +208,10 @@ export default function AdminMetricas() {
   );
 }
 
-function Kpi({ label, valor, emoji, verde, rojo }) {
+function Kpi({ label, valor, icono: Icono, verde, rojo }) {
   return (
     <div className="vt-ficha rounded-3xl p-4">
-      <p className="text-xl">{emoji}</p>
+      {Icono && <Icono size={20} className="opacity-70" />}
       <p className={`mt-1 vt-serif text-xl font-extrabold ${verde ? 'text-verde-700' : ''} ${rojo ? 'text-bermellon-500' : ''}`}>{valor}</p>
       <p className="text-[11px] font-bold uppercase tracking-wide opacity-60">{label}</p>
     </div>

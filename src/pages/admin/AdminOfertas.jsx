@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { guardarDoc, eliminarDoc } from '../../lib/inventario';
 import { useCatalog } from '../../contexts/CatalogContext';
 import { fmtCLP } from '../../lib/formato';
+import { AvatarIngrediente } from '../../components/Iconos';
+import { IconoOfertas, IconoReglas, IconoBasura } from '../../components/IconosAdmin';
 
 export default function AdminOfertas() {
   const { ofertas, reglas, porId, precioBase, bebidasTodas, fuente } = useCatalog();
@@ -26,7 +28,6 @@ export default function AdminOfertas() {
       const orden = Math.max(0, ...ofertas.map((o) => Number(o.orden) || 0)) + 1;
       const nueva = {
         id: `of_${Date.now()}`,
-        emoji: '🎁',
         nombre: 'Nueva oferta',
         empanadas: 1,
         bebidas: 0,
@@ -84,9 +85,10 @@ export default function AdminOfertas() {
       {error && <p className="mt-2 rounded-xl bg-bermellon-500/15 px-3 py-2 text-sm font-bold text-bermellon-600">{error}</p>}
 
       <div className="mt-3 flex gap-2">
-        {[['ofertas', '🎁 Ofertas'], ['reglas', '💡 Reglas']].map(([id, l]) => (
+        {[['ofertas', 'Ofertas', IconoOfertas], ['reglas', 'Reglas', IconoReglas]].map(([id, l, Icono]) => (
           <button key={id} onClick={() => setTab(id)}
-            className={`btn-tap rounded-xl px-3 py-2 text-xs font-extrabold ${tab === id ? 'bg-naranja-500 text-white' : 'bg-[#8b4513]/10'}`}>
+            className={`btn-tap vt-serif flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-extrabold uppercase tracking-wide ${tab === id ? 'bg-naranja-500 text-white' : 'bg-[#8b4513]/10'}`}>
+            <Icono size={14} />
             {l}
           </button>
         ))}
@@ -103,7 +105,7 @@ export default function AdminOfertas() {
             <div key={o.id} className="vt-ficha rounded-2xl p-4">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <span className="text-xl" aria-hidden>{o.emoji || '🎁'}</span>
+                  <IconoOfertas size={19} className="flex-shrink-0 opacity-70" />
                   <input
                     key={o.id}
                     defaultValue={o.nombre}
@@ -120,8 +122,8 @@ export default function AdminOfertas() {
                   {o.activa ? 'Activa' : 'Inactiva'}
                 </button>
                 <button onClick={() => borrarOferta(o)} title="Borrar oferta"
-                  className="btn-tap flex-shrink-0 rounded-full border-2 border-bermellon-500/40 px-2.5 py-1 text-xs font-extrabold text-bermellon-600">
-                  🗑
+                  className="btn-tap flex-shrink-0 rounded-full border-2 border-bermellon-500/40 p-1.5 text-bermellon-600">
+                  <IconoBasura size={15} />
                 </button>
               </div>
               <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
@@ -151,14 +153,15 @@ export default function AdminOfertas() {
                   <p className="mt-1 text-sm font-bold">{r.mensaje}</p>
                 </div>
                 <button onClick={() => borrarRegla(r)} title="Borrar regla"
-                  className="btn-tap flex-shrink-0 rounded-full border-2 border-bermellon-500/40 px-2.5 py-1 text-xs font-extrabold text-bermellon-600">
-                  🗑
+                  className="btn-tap flex-shrink-0 rounded-full border-2 border-bermellon-500/40 p-1.5 text-bermellon-600">
+                  <IconoBasura size={15} />
                 </button>
               </div>
               <div className="mt-2 flex flex-wrap gap-1">
                 {(r.acompanamientos || []).map((a) => (
-                  <span key={a} className="rounded-full bg-[#8b4513]/10 px-2 py-0.5 text-[11px] font-bold">
-                    {porId[a]?.emoji} {porId[a]?.nombre || a}
+                  <span key={a} className="flex items-center gap-1 rounded-full bg-[#8b4513]/10 px-2 py-0.5 text-[11px] font-bold">
+                    <AvatarIngrediente ing={porId[a] || { id: a }} size={13} />
+                    {porId[a]?.nombre || a}
                   </span>
                 ))}
               </div>

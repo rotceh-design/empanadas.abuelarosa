@@ -98,6 +98,17 @@ export async function eliminarDoc(coleccion, id) {
 }
 
 // Convierte la forma camelCase de la app a las columnas snake_case de Postgres.
+// Convierte la forma camelCase de la app a las columnas snake_case de Postgres
+// y filtra a columnas reales: un campo extra (p. ej. del overlay local o del
+// formulario) rompería el upsert de PostgREST con "column does not exist".
+const COLUMNAS = {
+  ingredients: ['id', 'categoria', 'linea', 'nombre', 'emoji', 'color', 'orden', 'disponible', 'tags', 'porcion_gramos', 'costo_kg', 'precio', 'stock_gramos', 'foto'],
+  drinks: ['id', 'categoria', 'nombre', 'emoji', 'color', 'orden', 'disponible', 'precio', 'costo', 'azucar', 'stock_unidades', 'foto'],
+  offers: ['id', 'nombre', 'empanadas', 'bebidas', 'precio', 'activa', 'orden', 'emoji', 'destacado'],
+  rules: ['id', 'base_tipo', 'base_id', 'acompanamientos', 'mensaje'],
+  badges: ['id', 'nombre', 'descripcion', 'icono', 'condicion', 'cupon'],
+};
+
 function prepararFila(coleccion, datos) {
   const copia = { ...datos };
   if (coleccion === 'ingredients') {
@@ -110,6 +121,10 @@ function prepararFila(coleccion, datos) {
   }
   // Limpia undefined (Supabase los rechaza).
   Object.keys(copia).forEach((k) => { if (copia[k] === undefined) delete copia[k]; });
+  const permitidas = COLUMNAS[coleccion];
+  if (permitidas) {
+    Object.keys(copia).forEach((k) => { if (!permitidas.includes(k)) delete copia[k]; });
+  }
   return copia;
 }
 

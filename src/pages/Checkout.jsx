@@ -95,7 +95,7 @@ export default function Checkout() {
     const creado = await crearPedido(pedido);
     const completo = { ...pedido, numero: creado.numero, id: creado.id };
     registrarPedido(pedido);
-    let resultado = 'texto';
+    let resultado = '';
     try {
       resultado = await enviarPedidoWhatsApp({ pedido: completo, comprobanteDataUrl: comprobante?.dataUrl || null });
     } catch { /* el ticket queda igual en la página siguiente */ }
@@ -207,7 +207,7 @@ export default function Checkout() {
             {enviando ? 'Enviando…' : `Enviar pedido por WhatsApp · ${fmtCLP(total)}`}
           </Boton>
           <p className="vt-cuerpo mt-1.5 text-center text-[11px] italic opacity-60">
-            Se abrirá WhatsApp con el detalle completo del pedido — revísalo y presiona enviar
+            Se abrirá WhatsApp con la imagen de tu pedido (y comprobante si lo adjuntaste)
           </p>
         </div>
       </div>

@@ -153,6 +153,10 @@ create table if not exists public.profiles (
 
 -- Compatibilidad con esquemas ya ejecutados: agrega columnas nuevas si faltan.
 alter table public.orders add column if not exists entrega jsonb;
+-- Fotos reales de ingredientes/bebidas (data URL comprimida; si está vacía
+-- se dibuja el icono SVG). Corre este bloque una vez si la BD ya existía.
+alter table public.ingredients add column if not exists foto text;
+alter table public.drinks     add column if not exists foto text;
 
 -- ---------- 2. ÍNDICES ----------
 create index if not exists idx_ingredients_categoria on public.ingredients (categoria);
@@ -203,15 +207,41 @@ alter table public.customers     enable row level security;
 alter table public.inventory_log enable row level security;
 alter table public.profiles      enable row level security;
 
--- ¿Es admin? (perfil marcado o correo de la dueña, igual que firestore.rules)
+-- ¿Es admin? (perfil marcado o correo de la dueña, igual que firestore.rules).
+-- El correo se compara en minúsculas: el cliente hace lo mismo y así un login
+-- como "Admin@AbuelaRosa.cl" no queda fuera del RLS.
 create or replace function public.es_admin()
 returns boolean
 language sql stable security definer set search_path = public as $$
   select coalesce(
     exists (select 1 from public.profiles where id = auth.uid() and is_admin),
-    coalesce(auth.email(), '') = 'admin@abuelarosa.cl'
+    lower(coalesce(auth.email(), '')) = 'admin@abuelarosa.cl'
   );
 $$;
+
+-- Cada cuenta nueva queda registrada en profiles (admin si es el correo de la
+-- dueña). Sin esto, es_admin() nunca encuentra el perfil y el RLS bloquea.
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles (id, email, is_admin)
+  values (new.id, new.email, lower(coalesce(new.email, '')) = 'admin@abuelarosa.cl')
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- Backfill: si la cuenta de la dueña ya existe, su perfil queda marcado.
+insert into public.profiles (id, email, is_admin)
+select id, email, true from auth.users
+where lower(coalesce(email, '')) = 'admin@abuelarosa.cl'
+on conflict (id) do update set is_admin = true;
 
 -- Catálogo: lectura pública, escritura solo admin
 drop policy if exists "catalogo lectura"   on public.ingredients;
@@ -268,23 +298,58 @@ create policy "counters lectura"   on public.counters for select using (true);
 create policy "counters escritura" on public.counters for all
   using (public.es_admin()) with check (public.es_admin());
 
--- Pedidos: cualquiera crea uno válido; solo admin lee/edita
+-- Pedidos: cualquiera crea uno válido; solo admin lee/edita.
+-- El check acota largos y cantidades: sin esto, un script podría insertar
+-- items interminables o campos gigantes para inflar la base.
 drop policy if exists "orders crear"   on public.orders;
 drop policy if exists "orders leer"    on public.orders;
 drop policy if exists "orders editar"  on public.orders;
 create policy "orders crear" on public.orders for insert with check (
   cliente ? 'nombre'
   and cliente ? 'telefono'
+  and numero is not null and numero > 0 and numero < 100000000
+  and length(coalesce(cliente ->> 'nombre', ''))   between 1 and 120
+  and length(coalesce(cliente ->> 'telefono', '')) between 6 and 20
+  and length(coalesce(cliente ->> 'direccion', '')) <= 300
+  and length(coalesce(cliente ->> 'referencia', '')) <= 300
   and jsonb_typeof(items) = 'array'
+  and jsonb_array_length(items) between 1 and 50
   and (totales ->> 'total') is not null
   and (totales ->> 'total')::numeric > 0
+  and (totales ->> 'total')::numeric <= 99999999
+  and length(coalesce(entrega::text, '')) <= 500
+  and cardinality(etiquetas) <= 20
+  and coalesce(length(comprobante), 0) <= 2000000
+  and length(coalesce(fuente, 'web')) <= 20
   and status = 'pendiente_pago'
 );
 create policy "orders leer"   on public.orders for select using (public.es_admin());
 create policy "orders editar" on public.orders for update
   using (public.es_admin()) with check (public.es_admin());
 drop policy if exists "orders borrar" on public.orders;
-create policy "orders borrar" on public.orders for delete using (public.es_admin());
+
+-- Anti-spam: máximo 5 pedidos con el mismo teléfono cada 10 minutos.
+create or replace function public.limitar_pedidos()
+returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  v_tel text := new.cliente ->> 'telefono';
+  v_n   int;
+begin
+  if v_tel is null then return new; end if;
+  select count(*) into v_n
+    from public.orders
+   where cliente ->> 'telefono' = v_tel
+     and created_at > now() - interval '10 minutes';
+  if v_n >= 5 then
+    raise exception 'Demasiados pedidos seguidos desde este teléfono';
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists trg_orders_limit on public.orders;
+create trigger trg_orders_limit before insert on public.orders
+  for each row execute function public.limitar_pedidos();
 
 -- Clientes: solo admin (el registro lo hace la RPC SECURITY DEFINER)
 drop policy if exists "customers lectura"   on public.customers;
@@ -324,7 +389,9 @@ begin
   return siguiente;
 end $$;
 
--- Sube el ranking de combinaciones + contador total
+-- Sube el ranking de combinaciones + contador total.
+-- Se llama desde la tienda (anónimo): valida rangos y largos para que nadie
+-- pueda contaminar el ranking con basura.
 create or replace function public.register_order_stats(
   p_clave  text,
   p_nombre text,
@@ -337,6 +404,20 @@ create or replace function public.register_order_stats(
 returns void
 language plpgsql security definer set search_path = public as $$
 begin
+  if p_clave is null or length(p_clave) > 64 then return; end if;
+  p_cantidad := least(greatest(coalesce(p_cantidad, 1), 1), 50);
+  p_nombre       := left(coalesce(p_nombre, ''), 120);
+  p_proteina_id  := left(coalesce(p_proteina_id, ''), 64);
+  p_queso_id     := left(coalesce(p_queso_id, ''), 64);
+  if p_emojis is not null and coalesce(array_length(p_emojis, 1), 0) > 12 then
+    select array_agg(x order by o) into p_emojis
+      from unnest(p_emojis) with ordinality as t(x, o) where o <= 12;
+  end if;
+  if p_acomp_ids is not null and coalesce(array_length(p_acomp_ids, 1), 0) > 8 then
+    select array_agg(x order by o) into p_acomp_ids
+      from unnest(p_acomp_ids) with ordinality as t(x, o) where o <= 8;
+  end if;
+
   insert into public.stats (id, count, nombre, emojis, proteina_id, queso_id, acompanamientos_ids)
   values (p_clave, p_cantidad, p_nombre, p_emojis, p_proteina_id, p_queso_id, p_acomp_ids)
   on conflict (id) do update
@@ -346,7 +427,9 @@ begin
     on conflict (id) do update set valor = public.counters.valor + 1;
 end $$;
 
--- Actualiza/crea un cliente (puntos y contador de pedidos)
+-- Actualiza/crea un cliente (puntos y contador de pedido).
+-- Se llama desde la tienda (anónimo): sanitiza teléfono y largos para que
+-- nadie pueda escribir registros gigantes o con contenido arbitrario.
 create or replace function public.upsert_customer(
   p_telefono text,
   p_nombre   text,
@@ -358,7 +441,12 @@ language plpgsql security definer set search_path = public as $$
 declare
   v_id text := regexp_replace(coalesce(p_telefono, ''), '\s', '', 'g');
 begin
-  if v_id = '' then return; end if;
+  -- Solo teléfonos plausibles: 6–16 dígitos con + opcionales.
+  if v_id !~ '^\+?[0-9]{6,16}$' then return; end if;
+
+  p_nombre := left(coalesce(p_nombre, ''), 80);
+  p_comuna := left(coalesce(p_comuna, ''), 60);
+  p_clave  := left(coalesce(p_clave, ''), 64);
 
   insert into public.customers (id, nombre, telefono, comuna, pedidos, puntos, ultima_combinacion, ultima_fecha, creado)
   values (v_id, p_nombre, p_telefono, p_comuna, 1, 50, p_clave, now(), now())
@@ -371,8 +459,9 @@ begin
         ultima_fecha       = now();
 end $$;
 
--- Descuento/devolución de stock en lote (reemplaza writeBatch)
--- p_payload: { ings: {id: gramos}, bebs: {id: unidades}, masa_gramos: int|null }
+-- Descuento/devolución de stock en lote (reemplaza writeBatch).
+-- SOLO administración: sin este chequeo, cualquier visitante podría alterar
+-- el inventario invocando la RPC directamente (gramos negativos = subir stock).
 create or replace function public.apply_stock(p_payload jsonb)
 returns void
 language plpgsql security definer set search_path = public as $$
@@ -380,6 +469,10 @@ declare
   rec record;
   v_delta int;
 begin
+  if not public.es_admin() then
+    raise exception 'apply_stock: sin permisos';
+  end if;
+
   -- Ingredientes
   for rec in
     select key as id, value::int as gramos

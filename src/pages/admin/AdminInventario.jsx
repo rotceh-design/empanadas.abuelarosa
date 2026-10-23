@@ -3,6 +3,10 @@ import { useCatalog } from '../../contexts/CatalogContext';
 import { fmtCLP } from '../../lib/formato';
 import { alertasStock, rendimientoEmpanadas, rendimientoBebidas, UMBRAL_DEFECTO } from '../../lib/stock';
 import { guardarDoc, guardarSettingsPatch, registrarMovimiento, leerLog } from '../../lib/inventario';
+import { IconoIngrediente, AvatarIngrediente } from '../../components/Iconos';
+import {
+  IconoAlerta, IconoMasa, IconoBebidas, IconoReloj, IconoCompra, IconoConteo,
+} from '../../components/IconosAdmin';
 
 export default function AdminInventario() {
   const { ingredientes, bebidasTodas, settings } = useCatalog();
@@ -58,9 +62,9 @@ export default function AdminInventario() {
   };
 
   const grupos = [
-    ['🥩 Proteínas', ingredientes.filter((i) => i.categoria === 'proteina'), 'ingrediente'],
-    ['🧀 Quesos', ingredientes.filter((i) => i.categoria === 'queso'), 'ingrediente'],
-    ['🥗 Acompañamientos', ingredientes.filter((i) => i.categoria === 'acompanamiento'), 'ingrediente'],
+    { cat: 'proteina', label: 'Proteínas', lista: ingredientes.filter((i) => i.categoria === 'proteina') },
+    { cat: 'queso', label: 'Quesos', lista: ingredientes.filter((i) => i.categoria === 'queso') },
+    { cat: 'acompanamiento', label: 'Acompañamientos', lista: ingredientes.filter((i) => i.categoria === 'acompanamiento') },
   ];
 
   return (
@@ -88,13 +92,14 @@ export default function AdminInventario() {
 
       {alertas.length > 0 && (
         <div className="mt-4 rounded-3xl border-2 border-bermellon-500/40 bg-bermellon-500/10 p-4">
-          <h3 className="vt-serif text-lg font-extrabold text-bermellon-600">
-            ⚠️ Renovar pronto ({alertas.length})
+          <h3 className="vt-serif flex items-center gap-2 text-lg font-extrabold text-bermellon-600">
+            <IconoAlerta size={18} /> Renovar pronto ({alertas.length})
           </h3>
           <ul className="mt-2 flex flex-wrap gap-2">
             {alertas.map((a) => (
-              <li key={`${a.tipo}-${a.id}`} className="vt-ficha rounded-full px-3 py-1.5 text-xs font-extrabold">
-                {a.emoji} {a.nombre} — {a.rendimiento === 0 ? 'AGOTADO' : `quedan ${a.rendimiento} ${a.unidades ? 'u.' : 'emp.'}`}
+              <li key={`${a.tipo}-${a.id}`} className="vt-ficha flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-extrabold">
+                <AvatarIngrediente ing={{ id: a.id, foto: a.foto }} size={13} />
+                {a.nombre} — {a.rendimiento === 0 ? 'AGOTADO' : `quedan ${a.rendimiento} ${a.unidades ? 'u.' : 'emp.'}`}
               </li>
             ))}
           </ul>
@@ -103,7 +108,7 @@ export default function AdminInventario() {
 
       {/* Masa */}
       <div className="mt-4">
-        <h3 className="mb-2 vt-titulo">🫓 Masa</h3>
+        <h3 className="mb-2 vt-titulo flex items-center gap-2"><IconoMasa size={17} className="opacity-70" /> Masa</h3>
         <FilaStock
           nombre={settings?.masa?.nombre || 'Masa de empanada'}
           stock={stockDe('masa')}
@@ -115,20 +120,25 @@ export default function AdminInventario() {
         />
       </div>
 
-      {grupos.map(([titulo, lista, naturaleza]) => (
-        <div key={titulo} className="mt-5">
-          <h3 className="mb-2 vt-titulo">{titulo} ({lista.length})</h3>
+      {grupos.map((g) => (
+        <div key={g.cat} className="mt-5">
+          <h3 className="mb-2 vt-titulo flex items-center gap-2">
+            <IconoIngrediente ing={{ categoria: g.cat }} size={17} />
+            {g.label} ({g.lista.length})
+          </h3>
           <div className="space-y-2">
-            {lista.map((ing) => (
+            {g.lista.map((ing) => (
               <FilaStock
                 key={ing.id}
                 nombre={ing.nombre}
-                stock={stockDe(naturaleza, ing)}
-                rendimiento={rendimientoDe(naturaleza, ing)}
+                foto={ing.foto}
+                iconoId={ing.id}
+                stock={stockDe('ingrediente', ing)}
+                rendimiento={rendimientoDe('ingrediente', ing)}
                 unidades={false}
                 umbral={umbral}
-                onCompra={() => setModal({ modo: 'compra', naturaleza, item: ing })}
-                onConteo={() => setModal({ modo: 'conteo', naturaleza, item: ing })}
+                onCompra={() => setModal({ modo: 'compra', naturaleza: 'ingrediente', item: ing })}
+                onConteo={() => setModal({ modo: 'conteo', naturaleza: 'ingrediente', item: ing })}
               />
             ))}
           </div>
@@ -136,12 +146,14 @@ export default function AdminInventario() {
       ))}
 
       <div className="mt-5">
-        <h3 className="mb-2 vt-titulo">🥤 Bebidas ({bebidasTodas.length})</h3>
+        <h3 className="mb-2 vt-titulo flex items-center gap-2"><IconoBebidas size={17} className="opacity-70" /> Bebidas ({bebidasTodas.length})</h3>
         <div className="space-y-2">
           {bebidasTodas.map((b) => (
             <FilaStock
               key={b.id}
               nombre={b.nombre}
+              foto={b.foto}
+              iconoId={b.id}
               stock={stockDe('bebida', b)}
               rendimiento={rendimientoDe('bebida', b)}
               unidades
@@ -155,12 +167,13 @@ export default function AdminInventario() {
 
       {log.length > 0 && (
         <div className="vt-ficha mt-6 rounded-3xl p-4">
-          <h3 className="vt-titulo">🕘 Historial de movimientos</h3>
+          <h3 className="vt-titulo flex items-center gap-2"><IconoReloj size={17} className="opacity-70" /> Historial de movimientos</h3>
           <ul className="mt-2 space-y-1.5 text-sm">
             {log.map((l, i) => (
               <li key={l.id || i} className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-bold">
-                  {l.tipo === 'compra' ? '➕' : '🧮'} {l.nombre} — {l.tipo === 'compra' ? 'compra' : 'conteo'}
+                <span className="flex items-center gap-1.5 font-bold">
+                  {l.tipo === 'compra' ? <IconoCompra size={14} /> : <IconoConteo size={14} />}
+                  {l.nombre} — {l.tipo === 'compra' ? 'compra' : 'conteo'}
                   {typeof l.gramos === 'number' && ` · ${fmtNum(l.gramos)}${l.naturaleza === 'bebida' ? ' u.' : ' g'}`}
                   {typeof l.costo === 'number' && l.costo > 0 && ` · ${fmtCLP(l.costo)}`}
                 </span>
@@ -212,7 +225,7 @@ export default function AdminInventario() {
   );
 }
 
-function FilaStock({ nombre, stock, rendimiento, unidades, umbral, onCompra, onConteo }) {
+function FilaStock({ nombre, foto, iconoId, stock, rendimiento, unidades, umbral, onCompra, onConteo }) {
   const chip = rendimiento === null
     ? 'bg-[#8b4513]/10 text-tierra-700 opacity-70'
     : rendimiento === 0
@@ -222,6 +235,7 @@ function FilaStock({ nombre, stock, rendimiento, unidades, umbral, onCompra, onC
         : 'bg-verde-500/15 text-verde-700';
   return (
     <div className="vt-ficha flex items-center gap-3 rounded-2xl p-3">
+      <AvatarIngrediente ing={{ id: iconoId, foto }} size={17} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-extrabold">{nombre}</p>
         <p className="text-xs opacity-60">
@@ -284,8 +298,9 @@ function ModalMovimiento({ modo, naturaleza, item, stockActual, settings, onCerr
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-tierra-900/60 p-4 backdrop-blur-sm sm:items-center">
       <div className="vt-modal w-full max-w-md rounded-3xl p-5">
-        <h3 className="vt-titulo text-lg">
-          {modo === 'compra' ? '➕ Registrar compra' : '🧮 Conteo físico'} — {nombre}
+        <h3 className="vt-titulo flex items-center gap-2 text-lg">
+          {modo === 'compra' ? <IconoCompra size={17} /> : <IconoConteo size={17} />}
+          {modo === 'compra' ? 'Registrar compra' : 'Conteo físico'} — {nombre}
         </h3>
         <p className="mt-1 text-xs opacity-60">
           Stock actual: {typeof stockActual === 'number' ? `${fmtNum(stockActual)} ${unidades ? 'u.' : 'g'}` : 'sin cargar'}

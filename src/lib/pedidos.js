@@ -56,6 +56,35 @@ export function observarPedidos(cb) {
   return () => { cancelado = true; supabase.removeChannel(canal); };
 }
 
+// Carga TODOS los pedidos de un rango (paginado), para reportes históricos:
+// el panel muestra los últimos 200, pero los reportes necesitan el histórico
+// completo sin importar cuántos pedidos existan.
+export async function cargarPedidosRango(desde, hasta) {
+  const d = desde || '1970-01-01T00:00:00.000Z';
+  const h = hasta || '2999-01-01T00:00:00.000Z';
+  if (!isSupabaseConfigured) {
+    return localLeer().filter((o) => {
+      const t = Date.parse(o.createdAt || '');
+      return t >= Date.parse(d) && t < Date.parse(h);
+    });
+  }
+  const salida = [];
+  const tam = 1000;
+  for (let salto = 0; ; salto += tam) {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .gte('created_at', d)
+      .lt('created_at', h)
+      .order('created_at', { ascending: false })
+      .range(salto, salto + tam - 1);
+    if (error) throw error;
+    salida.push(...(data || []).map(mapOrder));
+    if (!data || data.length < tam) break;
+  }
+  return salida;
+}
+
 export async function crearPedido(pedido) {
   const numero = await siguienteNumero();
   const data = {

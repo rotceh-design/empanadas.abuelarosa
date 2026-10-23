@@ -3,6 +3,8 @@ import { observarPedidos } from '../../lib/pedidos';
 import { useCatalog } from '../../contexts/CatalogContext';
 import { fmtCLP } from '../../lib/formato';
 import { costoPedido, costoPorcion, costoMasa } from '../../lib/costos';
+import { IconoIngrediente, AvatarIngrediente } from '../../components/Iconos';
+import { IconoMasa, IconoBebidas, IconoProduccion } from '../../components/IconosAdmin';
 
 export default function AdminProduccion() {
   const [pedidos, setPedidos] = useState([]);
@@ -33,7 +35,7 @@ export default function AdminProduccion() {
       (p.items || []).forEach((it) => {
         const cant = it.cantidad || 1;
         if (it.tipo === 'bebida') {
-          res.bebidas[it.nombre] = (res.bebidas[it.nombre] || 0) + cant;
+          res.bebidas[it.id || it.nombre] = (res.bebidas[it.id || it.nombre] || 0) + cant;
           return;
         }
         if (it.proteinaId) res.proteinas[it.proteinaId] = (res.proteinas[it.proteinaId] || 0) + cant;
@@ -61,12 +63,16 @@ export default function AdminProduccion() {
         categoria,
         id,
         nombre: ing?.nombre || id,
-        emoji: ing?.emoji || '',
         unidades: n,
         gramos: n * (ing?.porcionGramos || 0),
         costo: n * costoPorcion(ing),
       };
     });
+
+  const porBebida = useMemo(
+    () => Object.fromEntries(bebidasTodas.map((b) => [b.id, b])),
+    [bebidasTodas],
+  );
 
   const filas = useMemo(() => {
     const ings = [
@@ -74,33 +80,39 @@ export default function AdminProduccion() {
       ...filasPlancha(conteo.quesos, 'queso'),
       ...filasPlancha(conteo.acompanamientos, 'acompanamiento'),
     ];
-    const bebs = Object.entries(conteo.bebidas).sort((a, b) => b[1] - a[1]).map(([nombre, n]) => ({
-      categoria: 'bebida', id: nombre, nombre, emoji: '🥤', unidades: n, gramos: 0, costo: 0,
+    const bebs = Object.entries(conteo.bebidas).sort((a, b) => b[1] - a[1]).map(([id, n]) => ({
+      categoria: 'bebida', id, nombre: porBebida[id]?.nombre || id, unidades: n, gramos: 0, costo: 0,
     }));
     const masa = {
       categoria: 'masa', id: 'masa', nombre: settings?.masa?.nombre || 'Masa',
-      emoji: '🫓', unidades: totalEmp, gramos: masaGramos,
+      unidades: totalEmp, gramos: masaGramos,
       costo: totalEmp * costoMasa(settings),
     };
     return [masa, ...ings, ...bebs];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conteo, totalEmp, masaGramos, settings, porId]);
+  }, [conteo, totalEmp, masaGramos, settings, porId, porBebida]);
 
-  const bloque = (titulo, mapa) => {
+  const bloque = (titulo, mapa, Icono = IconoIngrediente) => {
     const entradas = Object.entries(mapa).sort((a, b) => b[1] - a[1]);
     if (!entradas.length) return null;
     return (
       <div className="vt-ficha rounded-3xl p-4">
-        <h3 className="vt-titulo">{titulo}</h3>
+        <h3 className="vt-titulo flex items-center gap-2">
+          <Icono size={17} className="opacity-70" /> {titulo}
+        </h3>
         <ul className="mt-2 space-y-1.5">
           {entradas.map(([id, n]) => {
             const ing = porId[id];
             const gramos = n * (ing?.porcionGramos || 0);
+            const bebida = porBebida[id];
             return (
               <li key={id} className="flex items-center justify-between gap-2 text-sm">
-                <span className="font-bold">{ing?.emoji} {ing?.nombre || id}</span>
+                <span className="flex items-center gap-1.5 font-bold">
+                  <AvatarIngrediente ing={bebida || ing || { id }} size={14} />
+                  {ing?.nombre || bebida?.nombre || id}
+                </span>
                 <span className="flex items-center gap-2">
-                  <span className="text-[11px] opacity-60">{fmtNum(gramos)} g · {fmtCLP(n * costoPorcion(ing))}</span>
+                  {gramos > 0 && <span className="text-[11px] opacity-60">{fmtNum(gramos)} g · {fmtCLP(n * costoPorcion(ing))}</span>}
                   <span className="rounded-full bg-naranja-500/15 px-2.5 py-0.5 font-extrabold text-naranja-600">{n}</span>
                 </span>
               </li>
@@ -150,13 +162,13 @@ export default function AdminProduccion() {
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {bloque('🥩 Proteínas', conteo.proteinas)}
-        {bloque('🧀 Quesos', conteo.quesos)}
-        <div className="sm:col-span-2">{bloque('🥗 Acompañamientos', conteo.acompanamientos)}</div>
-        {bloque('🥤 Bebidas', conteo.bebidas)}
+        {bloque('Proteínas', conteo.proteinas)}
+        {bloque('Quesos', conteo.quesos)}
+        <div className="sm:col-span-2">{bloque('Acompañamientos', conteo.acompanamientos)}</div>
+        {bloque('Bebidas', conteo.bebidas, IconoBebidas)}
         {masaGramos > 0 && (
           <div className="vt-ficha rounded-3xl p-4">
-            <h3 className="vt-titulo">🫓 Masa</h3>
+            <h3 className="vt-titulo flex items-center gap-2"><IconoMasa size={17} className="opacity-70" /> Masa</h3>
             <p className="mt-2 text-sm">
               <span className="font-bold">{fmtNum(masaGramos)} g ({fmtNum(masaGramos / 1000)} kg)</span>
               <span className="text-[11px] opacity-60"> · {fmtNum(totalEmp)} porciones de {settings?.masa?.porcionGramos || 90} g · {fmtCLP(totalEmp * costoMasa(settings))}</span>
@@ -166,8 +178,9 @@ export default function AdminProduccion() {
       </div>
 
       {totalEmp === 0 && (
-        <p className="vt-ficha mt-6 rounded-2xl p-6 text-center opacity-60">
-          No hay pedidos para {dia || 'el período seleccionado'}. ¡A producir cuando lleguen! 🧑‍🍳
+        <p className="vt-ficha mt-6 flex items-center justify-center gap-2 rounded-2xl p-6 text-center opacity-60">
+          <IconoProduccion size={20} />
+          No hay pedidos para {dia || 'el período seleccionado'}. ¡A producir cuando lleguen!
         </p>
       )}
     </div>

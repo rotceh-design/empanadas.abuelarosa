@@ -109,20 +109,51 @@ function descargarArchivo(file) {
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
-// Abre WhatsApp (wa.me) con el detalle COMPLETO del pedido hacia el número fijo
-// de pedidos, y descarga el comprobante (si existe) para adjuntarlo en el chat.
-// Devuelve: 'texto' | 'error'
+// Chat directo con la tienda, SIN texto: wa.me no puede adjuntar archivos,
+// así que la imagen va por portapapeles/compartir y este link solo abre el chat.
+export function urlWhatsAppPedidos() {
+  return `https://wa.me/${WHATSAPP_PEDIDOS}`;
+}
+
+// Envía la IMAGEN del ticket (+ comprobante de pago si existe) al WhatsApp de
+// pedidos, sin mensajes de texto. Cadena: compartir (móvil) → portapapeles
+// (pegar y enviar) → descarga + chat directo (respaldo).
+// Devuelve: 'compartido' | 'cancelado' | 'copiado' | 'descargado' | 'abierto' | 'error'
 export async function enviarPedidoWhatsApp({ pedido, comprobanteDataUrl = null }) {
   try {
     if (!pedido?.items?.length) return 'error';
-    window.open(linkWhatsApp(pedido), '_blank', 'noopener');
+    const numPedido = String(pedido.numero ?? '').padStart(4, '0');
+    const archivos = [];
+    try { archivos.push(await imagenTicketFile(pedido, WHATSAPP_PEDIDOS)); } catch { /* respaldo */ }
+    let comprobante = null;
     if (comprobanteDataUrl?.startsWith('data:')) {
-      try {
-        const num = String(pedido.numero ?? '').padStart(4, '0');
-        descargarArchivo(dataUrlAFile(comprobanteDataUrl, `comprobante-${num}`));
-      } catch { /* comprobante opcional */ }
+      try { comprobante = dataUrlAFile(comprobanteDataUrl, `comprobante-${numPedido}`); } catch { /* opcional */ }
     }
-    return 'texto';
+    if (comprobante) archivos.push(comprobante);
+    const principal = comprobante || archivos[0] || null;
+
+    if (principal && navigator.canShare?.({ files: archivos })) {
+      try {
+        await navigator.share({ files: archivos });
+        return 'compartido';
+      } catch (err) {
+        if (err?.name === 'AbortError') return 'cancelado';
+      }
+    }
+
+    if (principal) {
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ [principal.type || 'image/png']: principal })]);
+        window.open(urlWhatsAppPedidos(), '_blank', 'noopener');
+        return 'copiado';
+      } catch { /* sin portapapeles de imagen → descarga */ }
+      try { descargarArchivo(principal); } catch { /* respaldo */ }
+      window.open(urlWhatsAppPedidos(), '_blank', 'noopener');
+      return 'descargado';
+    }
+
+    window.open(urlWhatsAppPedidos(), '_blank', 'noopener');
+    return 'abierto';
   } catch {
     return 'error';
   }

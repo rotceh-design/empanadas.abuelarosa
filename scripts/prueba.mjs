@@ -1,6 +1,12 @@
 // Prueba del motor de ofertas y etiquetas (corre con node, sin dependencias).
 import { calcularMejorOferta } from '../src/lib/ofertas.js';
 import { CATALOGO_SEED, OFERTAS_SEED } from '../src/data/catalogoSeed.js';
+import {
+  construirReporte, periodoRango, periodoAnterior, periodosDisponibles,
+} from '../src/lib/reportes.js';
+import { generarExcelReporte, nombreArchivoReporte } from '../src/lib/excelReporte.js';
+import { generarInformeWord } from '../src/lib/informeWord.js';
+import { BEBIDAS_SEED } from '../src/data/catalogoSeed.js';
 
 let fallos = 0;
 const emp = (precio = 0) => ({ precioUnitario: precio, extrasPrecio: precio, cantidad: 1 });
@@ -417,7 +423,7 @@ ok('carro sin precio: calcula el precio', itemSinPrecio.total, 3715);
 
 // ---------- WhatsApp: pedido completo al número fijo de pedidos ----------
 import { fmtCLP } from '../src/lib/formato.js';
-import { generarTicket, linkWhatsApp, enviarPedidoWhatsApp, WHATSAPP_PEDIDOS } from '../src/lib/ticket.js';
+import { generarTicket, linkWhatsApp, enviarPedidoWhatsApp, urlWhatsAppPedidos, WHATSAPP_PEDIDOS } from '../src/lib/ticket.js';
 
 const pedidoWsp = {
   numero: 7,
@@ -457,16 +463,16 @@ si('WhatsApp: entrega', wspTexto.includes('Entrega: sábado 24/10 a las 13:00'))
 si('WhatsApp: número de pedido', wspTexto.includes('#0007'));
 si('WhatsApp: conserva saltos de línea', wspTexto.includes('\n'));
 
-// enviarPedidoWhatsApp abre wa.me con el texto completo (ventana simulada)
+// enviarPedidoWhatsApp: abre el chat directo; la imagen va por compartir o
+// portapapeles (en node la generación de imagen no corre → queda en 'abierto')
 const abiertas = [];
 globalThis.window = { open: (url) => { abiertas.push(url); return {}; } };
 const rEnvio = await enviarPedidoWhatsApp({ pedido: pedidoWsp });
 delete globalThis.window;
-ok('WhatsApp: enviar devuelve texto', rEnvio, 'texto');
-si('WhatsApp: enviar abre el destino correcto',
-  abiertas.length === 1 && abiertas[0].startsWith('https://wa.me/56935438480?text='));
-si('WhatsApp: el texto enviado es el pedido completo',
-  decodeURIComponent(abiertas[0].slice(abiertas[0].indexOf('?text=') + 6)).includes(`TOTAL: ${fmtCLP(11080)}`));
+ok('WhatsApp: URL directa del chat de pedidos', urlWhatsAppPedidos(), 'https://wa.me/56935438480');
+ok('WhatsApp: enviar abre el chat', rEnvio, 'abierto');
+si('WhatsApp: destino exacto y SIN ?text= (no se mandan palabras)',
+  abiertas.length === 1 && abiertas[0] === 'https://wa.me/56935438480');
 
 // Carrito vacío o pedido nulo: no abre nada y no revienta
 const abiertas2 = [];
@@ -481,6 +487,66 @@ si('WhatsApp: vacío/nulo no abre ventanas', abiertas2.length === 0);
 const ticketSuelto = generarTicket({ numero: 1, items: [{ tipo: 'empanada', nombre: 'Sin precio', cantidad: 1 }] });
 si('WhatsApp: tolera cliente/totales/entrega faltantes', ticketSuelto.includes('#0001') && !ticketSuelto.includes('undefined'));
 si('WhatsApp: item sin precio no inventa monto', !ticketSuelto.includes(' c/u'));
+
+// ================= REPORTES =================
+const porIdRep = Object.fromEntries(CATALOGO_SEED.map((i) => [i.id, i]));
+const ctxRep = {
+  porId: porIdRep,
+  bebidas: BEBIDAS_SEED,
+  settings: { masa: { porcionGramos: 90, costoKg: 2500 }, inventario: {} },
+};
+const pedRep = (id, fecha, extra = {}) => ({
+  id, numero: id, status: 'pago_confirmado', createdAt: fecha,
+  cliente: { nombre: 'Ana Pérez', telefono: '912345678', comuna: 'Maipú' },
+  items: [{
+    tipo: 'empanada', cantidad: 2, proteinaId: 'p_carne', quesoId: 'q_gouda',
+    acompanamientosIds: ['a_choclo'], precio: 2990, clave: 'k1',
+  }],
+  totales: { total: 5980, ahorro: 0, delivery: 1000 },
+  ...extra,
+});
+const listaRep = [
+  pedRep(1, '2026-10-10T18:00:00.000Z'),
+  pedRep(2, '2026-10-12T20:00:00.000Z', {
+    cliente: { nombre: 'Luis Soto', telefono: '987654321', comuna: 'Ñuñoa' },
+    items: [{ tipo: 'empanada', cantidad: 1, proteinaId: 'p_pollo', quesoId: 'q_gouda', acompanamientosIds: [], precio: 2990, clave: 'k2' },
+      { tipo: 'bebida', id: 'b_coca', nombre: 'Coca-Cola lata', cantidad: 1, precio: 1700 }],
+    totales: { total: 4690, ahorro: 0, delivery: 0 },
+  }),
+  pedRep(3, '2026-10-15T19:00:00.000Z', { status: 'pendiente_pago' }),
+  pedRep(4, '2026-09-30T18:00:00.000Z'), // fuera de octubre
+];
+const perRep = periodoRango('mes', '2026-10');
+const rep = construirReporte(listaRep, ctxRep, perRep);
+
+ok('reporte: solo pedidos del período', rep.kpis.pedidos, 3);
+ok('reporte: ventas solo de pagados', rep.kpis.ventas, 5980 + 4690);
+si('reporte: margen positivo', rep.kpis.margen > 0 && rep.kpis.margen < rep.kpis.ventas);
+ok('reporte: empanadas vendidas (2+1, pagados)', rep.kpis.empanadasVendidas, 3);
+ok('reporte: clientes únicos', rep.kpis.clientesUnicos, 2);
+ok('reporte: top cliente es Ana', rep.topClientes[0]?.nombre, 'Ana Pérez');
+ok('reporte: comuna top Maipú', rep.porComuna[0]?.comuna, 'Maipú');
+ok('reporte: dos productos distintos', rep.porProducto.length, 2);
+si('reporte: insights generados', Array.isArray(rep.insights) && rep.insights.length >= 6);
+si('reporte: porDiario ordenado', rep.porDia.every((d, i, a) => i === 0 || a[i - 1].fecha < d.fecha));
+si('reporte: ingredientes con costo', rep.ingredientes.some((i) => i.costoTotal > 0));
+ok('periodo anterior de octubre es septiembre', periodoAnterior(perRep).valor, '2026-09');
+ok('periodo anterior de enero es diciembre del año previo', periodoAnterior(periodoRango('mes', '2026-01')).valor, '2025-12');
+ok('año anterior', periodoAnterior(periodoRango('anio', '2026')).valor, '2025');
+si('períodos disponibles (mes)', periodosDisponibles('mes').length >= 12);
+si('períodos disponibles (año)', periodosDisponibles('anio').length >= 2);
+
+// Generación real de archivos en node (exceljs y docx corren sin navegador)
+const blobExcel = await generarExcelReporte(rep);
+const bufExcel = Buffer.from(await blobExcel.arrayBuffer());
+si('Excel: tamaño razonable', bufExcel.length > 4000);
+si('Excel: es un zip válido (PK)', bufExcel[0] === 0x50 && bufExcel[1] === 0x4b);
+si('Excel: nombre de archivo', nombreArchivoReporte(perRep, 'xlsx') === 'abuela-rosa-reporte-2026-10.xlsx');
+
+const blobWord = await generarInformeWord(rep, { incluirGraficos: false });
+const bufWord = Buffer.from(await blobWord.arrayBuffer());
+si('Word: tamaño razonable', bufWord.length > 3000);
+si('Word: es un zip válido (PK)', bufWord[0] === 0x50 && bufWord[1] === 0x4b);
 
 console.log(fallos === 0 ? '\n✓ Todas las pruebas pasaron' : `\n✗ ${fallos} prueba(s) fallaron`);
 process.exit(fallos === 0 ? 0 : 1);

@@ -6,7 +6,7 @@ import { useCart } from '../contexts/CartContext';
 import { usePlayer } from '../contexts/PlayerContext';
 import Ruleta from '../components/builder/Ruleta';
 import { Etiqueta } from '../components/ui';
-import { IconoIngrediente, IconoCarne, IconoQuesoWedge, IconoLata, IconoCandado } from '../components/Iconos';
+import { AvatarIngrediente, IconoCarne, IconoQuesoWedge, IconoLata, IconoCandado } from '../components/Iconos';
 import { fmtCLP } from '../lib/formato';
 import { desgloseEmpanada, aporteIngrediente } from '../lib/precios';
 import FichaEmpanada from '../components/FichaEmpanada';
@@ -474,7 +474,7 @@ export default function Armar() {
                         activo ? 'border-naranja-500 bg-naranja-500/15' : 'border-tierra-700/15 dark:border-crema-200/15'
                       }`}
                     >
-                      <IconoIngrediente ing={a} size={18} /> {a.nombre} <span className="opacity-60">+{fmtCLP(precios.acompanamientoExtra)}</span>
+                      <AvatarIngrediente ing={a} size={18} /> {a.nombre} <span className="opacity-60">+{fmtCLP(precios.acompanamientoExtra)}</span>
                     </button>
                   );
                 })}
@@ -500,7 +500,7 @@ export default function Armar() {
                               : 'border-[#4a2c17]/20 bg-[#fffaf0]/80 hover:border-[#4a2c17]/45'
                           }`}
                         >
-                          <IconoIngrediente ing={b} size={16} />
+                          <AvatarIngrediente ing={b} size={16} />
                           {b.nombre.replace(' lata', '')}
                           <span className="opacity-60">{enPedido ? '✓ en pedido' : `· ${fmtCLP(b.precio)}`}</span>
                         </button>
@@ -587,7 +587,7 @@ function FichaIngredientes({ proteina, queso, acompanamientos = [], esDulce }) {
         <ul className="space-y-1">
           {items.map(({ ing }, i) => (
             <li key={`${ing.id}-${i}`} className="flex items-center gap-1.5">
-              <IconoIngrediente ing={ing} size={14} className="shrink-0 opacity-80" />
+              <AvatarIngrediente ing={ing} size={14} className="shrink-0 opacity-80" />
               <span className="vt-serif min-w-0 truncate text-[10px] font-bold leading-tight text-[#4a2c17]">
                 {ing.nombre}
               </span>
@@ -617,7 +617,7 @@ function PasoGrid({ titulo, sub, items = [], seleccionados, onToggle, max, compa
               onClick={() => onToggle(ing)}
               disabled={lleno}
               aria-pressed={seleccionado}
-              className={`btn-tap relative flex flex-col items-center gap-1 rounded-2xl border-2 p-3 text-center transition-colors disabled:opacity-35 ${
+              className={`btn-tap group relative flex flex-col items-center gap-1.5 rounded-2xl border-2 p-2.5 text-center transition-colors disabled:opacity-35 ${
                 seleccionado
                   ? 'border-[#4a2c17] bg-[#4a2c17]/10 shadow-[0_6px_18px_-6px_rgb(74_44_23/0.35)]'
                   : 'border-[#4a2c17]/20 bg-[#fffaf0]/80 hover:border-[#4a2c17]/45'
@@ -626,16 +626,36 @@ function PasoGrid({ titulo, sub, items = [], seleccionados, onToggle, max, compa
               {seleccionado && (
                 <motion.span
                   layoutId={`check-${max}`}
-                  className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-[#4a2c17] text-xs font-extrabold text-[#f3e6c8]"
+                  className="absolute -right-1.5 -top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-[#4a2c17] text-xs font-extrabold text-[#f3e6c8] shadow"
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                 >
                   {max === 1 ? '✓' : idx + 1}
                 </motion.span>
               )}
-              <span className="flex h-11 w-11 items-center justify-center rounded-full border border-[#4a2c17]/25 bg-[#4a2c17]/8">
-                <IconoIngrediente ing={ing} size={24} />
+
+              {/* Zona protagonista: la foto (o el SVG grande) manda en la tarjeta */}
+              <span
+                className={`block w-full overflow-hidden rounded-xl border-2 transition-colors ${
+                  seleccionado ? 'border-[#4a2c17]' : 'border-[#4a2c17]/30'
+                }`}
+                style={{ aspectRatio: '5 / 4', background: `${ing.color || '#8b4513'}1f` }}
+              >
+                {ing.foto ? (
+                  <img
+                    src={ing.foto}
+                    alt={ing.nombre}
+                    loading="lazy"
+                    draggable={false}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.06]"
+                  />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center">
+                    <AvatarIngrediente ing={ing} size={compact ? 64 : 72} />
+                  </span>
+                )}
               </span>
+
               <span className="vt-serif text-[13px] font-bold leading-tight">{ing.nombre}</span>
               {ing.tags?.includes('vegana') && <span className="vt-cuerpo text-[10px] italic opacity-60">vegetal</span>}
               <span className="vt-cuerpo text-[11px] font-bold text-[#8b4513]">+{fmtCLP(aporteIngrediente(ing))}</span>

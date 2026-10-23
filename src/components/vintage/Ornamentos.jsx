@@ -93,7 +93,13 @@ export function SelloLinea({ titulo, subtitulo, icono, onClick, bloqueada = fals
           aria-hidden
           className="pointer-events-none absolute inset-2 rounded-full border border-dashed border-[#4a2c17]/40"
         />
-        <span className="relative flex h-14 w-14 items-center justify-center">
+        <span
+          className="relative mt-2 flex h-24 w-24 items-center justify-center rounded-full border-[3px] border-[#4a2c17]"
+          style={{
+            background: 'radial-gradient(circle at 50% 30%, #fffaf0 0%, #f3e6c8 80%)',
+            boxShadow: 'inset 0 0 0 2px #f3e6c8, inset 0 0 0 4.5px #4a2c17',
+          }}
+        >
           {icono}
         </span>
         <span className="vt-serif relative mt-1 rounded-full border-2 border-[#8b4513]/40 bg-[#8b4513]/10 px-3 py-0.5 text-[0.65rem] font-bold uppercase tracking-widest text-[#8b4513]">
@@ -117,10 +123,17 @@ export function SelloLinea({ titulo, subtitulo, icono, onClick, bloqueada = fals
         aria-hidden
         className="pointer-events-none absolute inset-2 rounded-full border border-dashed border-[#4a2c17]/40"
       />
-      <span className="relative flex h-14 w-14 items-center justify-center transition-transform duration-200 group-hover:scale-110">
+      {/* Medallón sello con la empanada protagonista */}
+      <span
+        className="relative mt-2 flex h-24 w-24 items-center justify-center rounded-full border-[3px] border-[#4a2c17] transition-transform duration-200 group-hover:scale-105"
+        style={{
+          background: 'radial-gradient(circle at 50% 30%, #fffaf0 0%, #f3e6c8 80%)',
+          boxShadow: 'inset 0 0 0 2px #f3e6c8, inset 0 0 0 4.5px #4a2c17, 0 10px 22px -10px rgb(42 22 11 / 0.45)',
+        }}
+      >
         {icono}
       </span>
-      <span className="vt-titulo relative mt-1 text-center text-[1.35rem] leading-none sm:text-2xl">
+      <span className="vt-titulo relative mt-3 text-center text-[1.35rem] leading-none sm:text-2xl">
         {titulo}
       </span>
       <span className="vt-cuerpo relative mt-1 text-sm italic opacity-75">{subtitulo}</span>

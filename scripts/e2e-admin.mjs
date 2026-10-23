@@ -231,7 +231,7 @@ async function main() {
     await page.goto(BASE + '/admin/pedidos', { waitUntil: 'domcontentloaded' });
     await esperaTexto(page, 'Cliente E2E');
 
-    await clicExacto(page, '💰 Pago confirmado');
+    await clicExacto(page, 'Pago confirmado');
     await page.waitForFunction(() =>
       JSON.parse(localStorage.getItem('empanadas_admin_local') || '{}')?.ingredientes?.p_pollo?.stockGramos === 930);
     ok('confirmar el pago descuenta la proteína', (await leerOverlay(page)).ingredientes.p_pollo.stockGramos, 930);
@@ -241,13 +241,13 @@ async function main() {
     ok('guarda la marca de descuento', (await leerPedido(page)).stockDescontado, true);
     ok('el pedido pasa a pago_confirmado', (await leerPedido(page)).status, 'pago_confirmado');
 
-    await clicExacto(page, '🔥 En preparación');
+    await clicExacto(page, 'En preparación');
     await esperaTexto(page, 'En preparación');
     await page.waitForFunction(() =>
       JSON.parse(localStorage.getItem('empanadas_pedidos_local') || '[]')[0]?.status === 'en_preparacion');
     ok('no descuenta dos veces al avanzar', (await leerOverlay(page)).ingredientes.p_pollo.stockGramos, 930);
 
-    await clicExacto(page, '⏳ Pendiente de pago');
+    await clicExacto(page, 'Pendiente de pago');
     await page.waitForFunction(() =>
       JSON.parse(localStorage.getItem('empanadas_pedidos_local') || '[]')[0]?.status === 'pendiente_pago');
     ok('volver a pendiente devuelve la proteína', (await leerOverlay(page)).ingredientes.p_pollo.stockGramos, 1000);
