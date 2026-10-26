@@ -110,8 +110,8 @@ export default function AdminCatalogo() {
       const c = await comprimirImagen(file, { maxLado: 384, calidad: 0.62, maxKB: 18 });
       setEditando((prev) => ({ ...prev, foto: c.dataUrl }));
       aviso(`Foto lista (${Math.round(c.bytes / 1024)} KB)`);
-    } catch {
-      aviso('No se pudo leer la imagen', 'error');
+    } catch (err) {
+      aviso(err?.message || 'No se pudo leer la imagen', 'error');
     }
   };
 

@@ -4,10 +4,15 @@
 // Comprime y, si `maxKB` está definido, itera hasta quedar bajo ese peso:
 // primero baja la calidad y, si no alcanza, reduzce también el tamaño.
 export async function comprimirImagen(file, { maxLado = 1000, calidad = 0.78, formato = 'image/webp', maxKB = 0 } = {}) {
+  if (/^image\/(heic|heif)/i.test(file.type) || /\.heic$|\.heif$/i.test(file.name || '')) {
+    throw new Error('Formato HEIC no compatible. Convierte la foto a JPG o PNG.');
+  }
   const img = await cargarImagen(file);
-  const escala = Math.min(1, maxLado / Math.max(img.width, img.height));
-  let w = Math.round(img.width * escala);
-  let h = Math.round(img.height * escala);
+  const anchoImg = img.naturalWidth || img.width;
+  const altoImg = img.naturalHeight || img.height;
+  const escala = Math.min(1, maxLado / Math.max(anchoImg, altoImg));
+  let w = Math.round(anchoImg * escala);
+  let h = Math.round(altoImg * escala);
 
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
@@ -52,17 +57,25 @@ export async function comprimirImagen(file, { maxLado = 1000, calidad = 0.78, fo
 
 function cargarImagen(file) {
   if (typeof createImageBitmap === 'function') {
-    return createImageBitmap(file).catch(() => cargarImagenConImg(file));
+    return createImageBitmap(file).catch((e1) => cargarImagenConImg(file, e1));
   }
   return cargarImagenConImg(file);
 }
 
-function cargarImagenConImg(file) {
+function cargarImagenConImg(file, errorPrevio = null) {
   return new Promise((resolve, reject) => {
+    if (!file?.type?.startsWith('image/') && !/\.(jpe?g|png|webp|gif|bmp|avif|svg)$/i.test(file?.name || '')) {
+      reject(new Error(`El archivo "${file?.name || 'desconocido'}" no es una imagen válida`));
+      return;
+    }
     const url = URL.createObjectURL(file);
     const img = new Image();
-    img.onload = () => resolve({ ...img, width: img.naturalWidth, height: img.naturalHeight, src: url });
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('No se pudo leer la imagen')); };
+    img.onload = () => resolve(img);
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      const detalle = errorPrevio?.message ? ` (${errorPrevio.message})` : '';
+      reject(new Error(`No se pudo leer la imagen${detalle}. Usa JPG, PNG o WebP.`));
+    };
     img.src = url;
   });
 }

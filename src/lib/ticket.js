@@ -110,50 +110,39 @@ function descargarArchivo(file) {
 }
 
 // Chat directo con la tienda, SIN texto: wa.me no puede adjuntar archivos,
-// así que la imagen va por portapapeles/compartir y este link solo abre el chat.
+// así que la imagen va por portapapeles y este link solo abre el chat.
 export function urlWhatsAppPedidos() {
   return `https://wa.me/${WHATSAPP_PEDIDOS}`;
 }
 
-// Envía la IMAGEN del ticket (+ comprobante de pago si existe) al WhatsApp de
-// pedidos, sin mensajes de texto. Cadena: compartir (móvil) → portapapeles
-// (pegar y enviar) → descarga + chat directo (respaldo).
-// Devuelve: 'compartido' | 'cancelado' | 'copiado' | 'descargado' | 'abierto' | 'error'
+// Envía el ticket SIEMPRE al chat directo de la tienda (+56 9 35438480).
+// Cadena cómoda: portapapeles (imagen lista para pegar) → abre wa.me con
+// el ticket escrito → el usuario pega la imagen y envía. Sin hoja de
+// compartir ni elegir contacto.
+// Devuelve: 'copiado' | 'descargado' | 'abierto' | 'error'
 export async function enviarPedidoWhatsApp({ pedido, comprobanteDataUrl = null }) {
   try {
     if (!pedido?.items?.length) return 'error';
     const numPedido = String(pedido.numero ?? '').padStart(4, '0');
-    const archivos = [];
-    try { archivos.push(await imagenTicketFile(pedido, WHATSAPP_PEDIDOS)); } catch { /* respaldo */ }
-    let comprobante = null;
+    let principal = null;
+    try { principal = await imagenTicketFile(pedido, WHATSAPP_PEDIDOS); } catch { /* opcional */ }
     if (comprobanteDataUrl?.startsWith('data:')) {
-      try { comprobante = dataUrlAFile(comprobanteDataUrl, `comprobante-${numPedido}`); } catch { /* opcional */ }
-    }
-    if (comprobante) archivos.push(comprobante);
-    const principal = comprobante || archivos[0] || null;
-
-    if (principal && navigator.canShare?.({ files: archivos })) {
-      try {
-        await navigator.share({ files: archivos });
-        return 'compartido';
-      } catch (err) {
-        if (err?.name === 'AbortError') return 'cancelado';
-      }
+      try { principal = dataUrlAFile(comprobanteDataUrl, `comprobante-${numPedido}`) || principal; } catch { /* opcional */ }
     }
 
+    let resultado = 'abierto';
     if (principal) {
       try {
         await navigator.clipboard.write([new ClipboardItem({ [principal.type || 'image/png']: principal })]);
-        window.open(urlWhatsAppPedidos(), '_blank', 'noopener');
-        return 'copiado';
-      } catch { /* sin portapapeles de imagen → descarga */ }
-      try { descargarArchivo(principal); } catch { /* respaldo */ }
-      window.open(urlWhatsAppPedidos(), '_blank', 'noopener');
-      return 'descargado';
+        resultado = 'copiado';
+      } catch {
+        try { descargarArchivo(principal); resultado = 'descargado'; } catch { /* respaldo */ }
+      }
     }
 
-    window.open(urlWhatsAppPedidos(), '_blank', 'noopener');
-    return 'abierto';
+    // Abre directo al chat de pedidos con el ticket ya escrito.
+    window.open(linkWhatsApp(pedido), '_blank', 'noopener');
+    return resultado;
   } catch {
     return 'error';
   }
