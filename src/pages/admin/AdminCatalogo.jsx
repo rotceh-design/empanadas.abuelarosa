@@ -45,12 +45,15 @@ export default function AdminCatalogo() {
       aviso(`Guardado: ${datos.nombre}`);
       return true;
     } catch (e) {
-      const faltaFoto = String(e?.message || '').toLowerCase().includes('foto');
-      const detalle = String(e?.message || e?.hint || '').slice(0, 140);
+      const msg = String(e?.message || e?.hint || '');
+      const esRed = /failed to fetch|networkerror|load failed/i.test(msg);
+      const faltaFoto = msg.toLowerCase().includes('foto');
       aviso(
-        faltaFoto
-          ? 'Falta la migración de fotos en Supabase (columna foto) — corre el SQL y reintenta'
-          : `No se pudo guardar${detalle ? `: ${detalle}` : ''}`,
+        esRed
+          ? 'Sin conexión a Supabase: revisa que el proyecto no esté pausado y que las variables VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY estén bien en Vercel'
+          : faltaFoto
+            ? 'Falta la migración de fotos en Supabase (columna foto) — corre el SQL y reintenta'
+            : `No se pudo guardar${msg ? `: ${msg.slice(0, 140)}` : ''}`,
         'error',
       );
       return false;
